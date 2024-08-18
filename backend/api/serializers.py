@@ -6,6 +6,7 @@ from base64 import b64decode
 from io import BytesIO
 from PIL import Image
 from djoser.serializers import UserCreateSerializer as BaseUserCreateSerializer
+from rest_framework.generics import get_object_or_404
 from core.models import Subscription
 
 User = get_user_model()
@@ -46,6 +47,44 @@ class UserSerializer(serializers.ModelSerializer):
             return False
         return Subscription.objects.filter(user=user, subscribed_to=obj).exists()
 
+
+class SubscriptionSerializer(serializers.ModelSerializer):
+    is_subscribed = serializers.SerializerMethodField()
+    recipes = serializers.SerializerMethodField()
+    recipes_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = [
+            'email',
+            'id',
+            'username',
+            'first_name',
+            'last_name',
+            'avatar',
+            'is_subscribed',
+            'recipes',
+            'recipes_count'
+        ]
+
+    def get_is_subscribed(self, obj):
+        user = self.context['request'].user
+        if user.is_anonymous:
+            return False
+        return Subscription.objects.filter(user=user, subscribed_to=obj).exists()
+
+    def get_recipes(self, obj):
+        return []
+
+    def get_recipes_count(self, obj):
+        return len(self.get_recipes(obj))
+
+
+class SubscribeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Subscription
+        fields = ['user', 'subscribed_to', 'created_at']
+        read_only_fields = ['user', 'subscribed_to', 'created_at']
 
 class Base64ImageField(serializers.ImageField):
     def to_internal_value(self, data):
