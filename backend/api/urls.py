@@ -12,7 +12,8 @@ from .views import (
     RecipeLinkView,
     TagViewSet,
     IngredientViewSet,
-    FavoriteView
+    FavoriteView,
+    ShoppingCartView
 )
 from .serializers import UserSerializer
 
@@ -32,6 +33,7 @@ router.register(r'tags', TagViewSet, basename='tag')
 urlpatterns = [
     path('auth/', include('djoser.urls.authtoken')),
     path('recipes/<int:id>/get-link/', RecipeLinkView.as_view(), name='get-recipe-link'),
+    path('recipes/<int:id>/shopping_cart/', ShoppingCartView.as_view(SUBSCRIBE), name='shopping_cart'),
     path('', include(router.urls)),
     path('users/<int:pk>/', RetrieveAPIView.as_view(queryset=User.objects.all(), serializer_class=UserSerializer), name='user_detail'),
     path('users/subscriptions/', SubscriptionsListView.as_view(), name='subscriptions'),

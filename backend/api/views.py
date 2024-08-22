@@ -13,7 +13,7 @@ from rest_framework.views import APIView
 from rest_framework.mixins import CreateModelMixin, DestroyModelMixin
 from rest_framework.viewsets import GenericViewSet, ModelViewSet, ReadOnlyModelViewSet
 from django.contrib.auth import get_user_model
-from .serializers import UserSerializer, AvatarSerializer, SubscriptionSerializer, SubscribeSerializer, RecipeListOrRetrieveSerializer, RecipePostOrPatchSerializer, TagSerializer, GetOrRetriveIngredientSerializer, FavoriteSerializer
+from .serializers import UserSerializer, AvatarSerializer, SubscriptionSerializer, SubscribeSerializer, RecipeListOrRetrieveSerializer, RecipePostOrPatchSerializer, TagSerializer, GetOrRetriveIngredientSerializer, FavoriteSerializer, ShoppingCartSerializer
 from core.models import Subscription, FavoriteRecipe
 from django.core.exceptions import PermissionDenied
 from django.http import Http404
@@ -21,7 +21,7 @@ from django import urls
 from django.shortcuts import redirect
 from django_filters.rest_framework import DjangoFilterBackend
 from .filters import RecipeFilter, Recipe
-from core.models import Recipe, ShortenedRecipeURL, Ingredient, Tag
+from core.models import Recipe, ShortenedRecipeURL, Ingredient, Tag, ShoppingCart
 from .serializers import RecipeLinkSerializer
 
 User = get_user_model()
@@ -184,3 +184,35 @@ class FavoriteView(ModelViewSet):
             return Response(status=status.HTTP_204_NO_CONTENT)
         except FavoriteRecipe.DoesNotExist:
             return Response({"detail": "This recipe is not in your favorites."}, status=status.HTTP_404_NOT_FOUND)
+
+class ShoppingCartView(CreateModelMixin, DestroyModelMixin, GenericViewSet):
+    queryset = ShoppingCart.objects.all()
+    serializer_class = ShoppingCartSerializer
+    http_method_names = ['post', 'delete']
+
+    def create(self, request, *args, **kwargs):
+        recipe_id = self.kwargs.get('id')
+        recipe = get_object_or_404(Recipe, id=recipe_id)
+
+        # Поскольку user передается в request и уже есть в контексте, добавим его к данным
+        data = {'user': request.user.id, 'recipe': recipe.id}
+
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+
+        # Теперь сохраняем данные, передавая recipe
+        serializer.save(recipe=recipe, user=request.user)
+
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def destroy(self, request, *args, **kwargs):
+        recipe_id = self.kwargs.get('id')
+        recipe = get_object_or_404(Recipe, id=recipe_id)
+
+        shopping_cart_item = ShoppingCart.objects.filter(recipe=recipe, user=request.user).first()
+        if shopping_cart_item:
+            shopping_cart_item.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        else:
+            return Response({"detail": "This recipe is not in your shopping cart."}, status=status.HTTP_404_NOT_FOUND)

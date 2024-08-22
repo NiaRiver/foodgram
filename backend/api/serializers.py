@@ -8,7 +8,7 @@ from PIL import Image
 from rest_framework.generics import ValidationError
 from djoser.serializers import UserCreateSerializer as BaseUserCreateSerializer
 from rest_framework.generics import get_object_or_404
-from core.models import Subscription, RecipeIngredient, Recipe, Tag, Ingredient, ShortenedRecipeURL, FavoriteRecipe
+from core.models import Subscription, RecipeIngredient, Recipe, Tag, Ingredient, ShortenedRecipeURL, FavoriteRecipe, ShoppingCart
 
 User = get_user_model()
 
@@ -261,3 +261,13 @@ class FavoriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = FavoriteRecipe
         fields = ['user', 'recipe']
+
+class ShoppingCartSerializer(serializers.ModelSerializer):
+    id = serializers.ReadOnlyField(source='recipe.id')
+    image = serializers.ReadOnlyField(source='recipe.image.url')
+    name = serializers.ReadOnlyField(source='recipe.name')
+    cooking_time = serializers.ReadOnlyField(source='recipe.cooking_time')
+
+    class Meta:
+        model = ShoppingCart
+        fields = ['id', 'image', 'name', 'cooking_time']

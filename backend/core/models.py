@@ -116,3 +116,14 @@ class FavoriteRecipe(models.Model):
 
     def __str__(self):
         return f'{self.user.username} -> {self.recipe.name}'
+
+class ShoppingCart(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='shopping_cart_recipes')
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name='shopping_cart_by')
+    added_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'recipe')  # Уникальная пара User-Recipe
+
+    def __str__(self):
+        return f'{self.user.username} -> {self.recipe.name}'
