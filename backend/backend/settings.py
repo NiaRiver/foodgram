@@ -18,6 +18,7 @@ INSTALLED_APPS = [
 
     'rest_framework',
     'rest_framework.authtoken',
+    'django_filters',
     'djoser',
 
     'api',
@@ -120,3 +121,6 @@ MAX_LENGTH_NAME = 150
 MAX_LENGTH_EMAIL = 254
 MAX_LENGTH_PASSWORD = 128
 PATTERN_NAME = r'^[\w.@+-]+\Z'
+MAX_LENGTH_TITLE = 255
+MAX_LENGTH_IAG = 100
+MAX_LENGTH_UNIT = 50

@@ -1,3 +1,6 @@
+import string
+import random
+
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
@@ -42,3 +45,63 @@ class Subscription(models.Model):
 
     def __str__(self):
         return f'{self.user} subscribed to {self.subscribed_to}'
+
+
+class Tag(models.Model):
+    name = models.CharField(max_length=50, unique=True)
+    slug = models.SlugField(max_length=50, unique=True)
+
+    def __str__(self):
+        return self.name
+
+
+class Ingredient(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    unit = models.CharField(max_length=50)
+
+    def __str__(self):
+        return self.name
+
+
+class Recipe(models.Model):
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='recipes')
+    name = models.CharField(max_length=100)
+    image = models.ImageField(upload_to='recipes/images/')
+    text = models.TextField()
+    cooking_time = models.PositiveIntegerField()
+    tags = models.ManyToManyField(Tag, related_name='recipes')
+
+    class Meta:
+        unique_together = ('author', 'name')
+        verbose_name = "Recipe"
+        verbose_name_plural = "Recipes"
+
+    def __str__(self):
+        return self.name
+
+
+class RecipeIngredient(models.Model):
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name='ingredients')
+    ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE, related_name='recipe_ingredients')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+
+    class Meta:
+        unique_together = ('recipe', 'ingredient')
+        verbose_name = "Recipe Ingredient"
+        verbose_name_plural = "Recipe Ingredients"
+
+    def __str__(self):
+        return f'{self.amount} {self.ingredient.unit} of {self.ingredient.name} in {self.recipe.name}'
+
+
+def generate_short_code(length=6):
+    characters = string.ascii_letters + string.digits
+    return ''.join(random.choice(characters) for _ in range(length))
+
+class ShortenedRecipeURL(models.Model):
+    recipe = models.OneToOneField(Recipe, on_delete=models.CASCADE, related_name='shortened_url')
+    short_code = models.CharField(max_length=6, unique=True, default=generate_short_code)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f'{self.short_code} -> {self.recipe.name}'

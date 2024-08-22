@@ -1,15 +1,36 @@
+from rest_framework.generics import RetrieveAPIView
+from rest_framework.routers import DefaultRouter
+from django.contrib.auth import get_user_model
 from django.urls import path, include
-from .views import UserListView, UserAvatarUpdateView, SubscriptionsListView, SubscribeCreateDestroyView
+from .views import (
+    UserAvatarUpdateView,
+    SubscriptionsListView,
+    RecipeViewSet,
+    # RecipeListView,
+    # RecipeDetailView,
+    SubscribeCreateDestroyView,
+    RecipeLinkView
+)
+from .serializers import UserSerializer
+
+app_name = 'api'
+User = get_user_model()
 
 SUBSCRIBE = {
     'post': 'create',
     'delete': 'destroy'
 }
 
+router = DefaultRouter()
+router.register(r'recipes', RecipeViewSet, basename='recipe')
+
 urlpatterns = [
     path('auth/', include('djoser.urls.authtoken')),
-    path('users/subscriptions/', SubscriptionsListView.as_view(), name='subs'),
-    path('users/me/avatar/', UserAvatarUpdateView.as_view(), name='user_avatar_update'),
+    path('recipes/<int:id>/get-link/', RecipeLinkView.as_view(), name='get-recipe-link'),
+    path('', include(router.urls)),
+    path('users/<int:pk>/', RetrieveAPIView.as_view(queryset=User.objects.all(), serializer_class=UserSerializer), name='user_detail'),
+    path('users/subscriptions/', SubscriptionsListView.as_view(), name='subscriptions'),
     path('users/<int:pk>/subscribe/', SubscribeCreateDestroyView.as_view(SUBSCRIBE), name='subscribe'),
     path('', include('djoser.urls')),
+    path('users/me/avatar/', UserAvatarUpdateView.as_view(), name='user_avatar_update')
 ]

@@ -1,18 +1,28 @@
 from rest_framework import generics, status
 from rest_framework.response import Response
+from rest_framework import filters
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.generics import (
     RetrieveUpdateDestroyAPIView,
     ListAPIView,
+    ListCreateAPIView,
     get_object_or_404,
     ValidationError
 )
+from rest_framework.views import APIView
 from rest_framework.mixins import CreateModelMixin, DestroyModelMixin
-from rest_framework.viewsets import GenericViewSet
+from rest_framework.viewsets import GenericViewSet, ModelViewSet
 from django.contrib.auth import get_user_model
-from .serializers import UserSerializer, AvatarSerializer, SubscriptionSerializer, SubscribeSerializer
+from .serializers import UserSerializer, AvatarSerializer, SubscriptionSerializer, SubscribeSerializer, RecipeListOrRetrieveSerializer, RecipePostOrPatchSerializer
 from core.models import Subscription
 from django.core.exceptions import PermissionDenied
 from django.http import Http404
+from django import urls
+from django.shortcuts import redirect
+from django_filters.rest_framework import DjangoFilterBackend
+from .filters import RecipeFilter, Recipe
+from core.models import Recipe, ShortenedRecipeURL
+from .serializers import RecipeLinkSerializer
 
 User = get_user_model()
 
@@ -103,3 +113,36 @@ class SubscribeCreateDestroyView(CreateModelMixin, DestroyModelMixin, GenericVie
             return Response({"detail": str(e)}, status=status.HTTP_404_NOT_FOUND)
 
 
+class RecipeViewSet(ModelViewSet):
+    queryset = Recipe.objects.all()
+    # serializer_class = RecipeListOrRetrieveSerializer
+
+    # В зависимости от действия (list или retrieve) используем разные сериализаторы
+    def get_serializer_class(self):
+        if self.action in ['list', 'retrieve']:
+            return RecipeListOrRetrieveSerializer
+        elif self.action in ['create', 'update', 'partial_update']:
+            return RecipePostOrPatchSerializer
+
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = [
+        'author', 'tags',
+        # 'is_favorited', 'is_in_shopping_cart'
+    ]
+
+
+class RecipeLinkView(APIView):
+    def get(self, request, id):
+        try:
+            recipe = Recipe.objects.get(pk=id)
+            if not hasattr(recipe, 'shortened_url'):
+                ShortenedRecipeURL.objects.create(recipe=recipe)
+            serializer = RecipeLinkSerializer(recipe, context={'request': request})
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Recipe.DoesNotExist:
+            return Response({"detail": "Recipe not found."}, status=status.HTTP_404_NOT_FOUND)
+
+
+def redirect_to_original(request, short_code):
+    url = get_object_or_404(ShortenedRecipeURL, short_code=short_code)
+    return redirect(urls.reverse('api:recipe-detail', kwargs={'pk': url.recipe.id}))    
