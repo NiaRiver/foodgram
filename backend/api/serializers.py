@@ -8,7 +8,7 @@ from PIL import Image
 from rest_framework.generics import ValidationError
 from djoser.serializers import UserCreateSerializer as BaseUserCreateSerializer
 from rest_framework.generics import get_object_or_404
-from core.models import Subscription, RecipeIngredient, Recipe, Tag, Ingredient, ShortenedRecipeURL
+from core.models import Subscription, RecipeIngredient, Recipe, Tag, Ingredient, ShortenedRecipeURL, FavoriteRecipe
 
 User = get_user_model()
 
@@ -244,3 +244,14 @@ class RecipeLinkSerializer(serializers.ModelSerializer):
         representation['short-link'] = representation.pop('short_link')
         return representation
 
+
+class GetOrRetriveIngredientSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Ingredient
+        fields = ['id', 'name', 'unit']
+
+
+class FavoriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FavoriteRecipe
+        fields = ['user', 'recipe']

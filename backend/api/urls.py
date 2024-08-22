@@ -9,7 +9,10 @@ from .views import (
     # RecipeListView,
     # RecipeDetailView,
     SubscribeCreateDestroyView,
-    RecipeLinkView
+    RecipeLinkView,
+    TagViewSet,
+    IngredientViewSet,
+    FavoriteView
 )
 from .serializers import UserSerializer
 
@@ -23,6 +26,8 @@ SUBSCRIBE = {
 
 router = DefaultRouter()
 router.register(r'recipes', RecipeViewSet, basename='recipe')
+router.register(r'ingredients', IngredientViewSet, basename='ingredient')
+router.register(r'tags', TagViewSet, basename='tag')
 
 urlpatterns = [
     path('auth/', include('djoser.urls.authtoken')),
@@ -32,5 +37,6 @@ urlpatterns = [
     path('users/subscriptions/', SubscriptionsListView.as_view(), name='subscriptions'),
     path('users/<int:pk>/subscribe/', SubscribeCreateDestroyView.as_view(SUBSCRIBE), name='subscribe'),
     path('', include('djoser.urls')),
-    path('users/me/avatar/', UserAvatarUpdateView.as_view(), name='user_avatar_update')
+    path('users/me/avatar/', UserAvatarUpdateView.as_view(), name='user_avatar_update'),
+    path('recipes/<int:id>/favorite/', FavoriteView.as_view(SUBSCRIBE), name='favorite')
 ]

@@ -11,17 +11,17 @@ from rest_framework.generics import (
 )
 from rest_framework.views import APIView
 from rest_framework.mixins import CreateModelMixin, DestroyModelMixin
-from rest_framework.viewsets import GenericViewSet, ModelViewSet
+from rest_framework.viewsets import GenericViewSet, ModelViewSet, ReadOnlyModelViewSet
 from django.contrib.auth import get_user_model
-from .serializers import UserSerializer, AvatarSerializer, SubscriptionSerializer, SubscribeSerializer, RecipeListOrRetrieveSerializer, RecipePostOrPatchSerializer
-from core.models import Subscription
+from .serializers import UserSerializer, AvatarSerializer, SubscriptionSerializer, SubscribeSerializer, RecipeListOrRetrieveSerializer, RecipePostOrPatchSerializer, TagSerializer, GetOrRetriveIngredientSerializer, FavoriteSerializer
+from core.models import Subscription, FavoriteRecipe
 from django.core.exceptions import PermissionDenied
 from django.http import Http404
 from django import urls
 from django.shortcuts import redirect
 from django_filters.rest_framework import DjangoFilterBackend
 from .filters import RecipeFilter, Recipe
-from core.models import Recipe, ShortenedRecipeURL
+from core.models import Recipe, ShortenedRecipeURL, Ingredient, Tag
 from .serializers import RecipeLinkSerializer
 
 User = get_user_model()
@@ -145,4 +145,42 @@ class RecipeLinkView(APIView):
 
 def redirect_to_original(request, short_code):
     url = get_object_or_404(ShortenedRecipeURL, short_code=short_code)
-    return redirect(urls.reverse('api:recipe-detail', kwargs={'pk': url.recipe.id}))    
+    return redirect(urls.reverse('api:recipe-detail', kwargs={'pk': url.recipe.id}))
+
+class IngredientViewSet(ReadOnlyModelViewSet):
+    queryset = Ingredient.objects.all()
+    serializer_class = GetOrRetriveIngredientSerializer
+
+class TagViewSet(ReadOnlyModelViewSet):
+    queryset = Tag.objects.all()
+    serializer_class = TagSerializer
+
+
+class FavoriteView(ModelViewSet):
+    queryset = FavoriteRecipe.objects.all()
+    serializer_class = FavoriteSerializer
+    http_method_names = ['post', 'delete']
+
+    def create(self, request, *args, **kwargs):
+        recipe_id = self.kwargs.get('id')  # Get recipe_id from URL
+        recipe = get_object_or_404(Recipe, id=recipe_id)  # Retrieve the Recipe instance
+
+        data = {'user': request.user.id, 'recipe': recipe.id}
+
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def destroy(self, request, *args, **kwargs):
+        recipe_id = self.kwargs.get('id')  # Get recipe_id from URL
+        recipe = get_object_or_404(Recipe, id=recipe_id)  # Retrieve the Recipe instance
+
+        try:
+            favorite_recipe = FavoriteRecipe.objects.get(recipe=recipe, user=self.request.user)
+            favorite_recipe.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except FavoriteRecipe.DoesNotExist:
+            return Response({"detail": "This recipe is not in your favorites."}, status=status.HTTP_404_NOT_FOUND)

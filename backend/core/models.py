@@ -105,3 +105,14 @@ class ShortenedRecipeURL(models.Model):
 
     def __str__(self):
         return f'{self.short_code} -> {self.recipe.name}'
+
+class FavoriteRecipe(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='favorite_recipes')
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name='favorited_by')
+    added_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'recipe')  # Уникальная пара User-Recipe
+
+    def __str__(self):
+        return f'{self.user.username} -> {self.recipe.name}'
