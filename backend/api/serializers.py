@@ -183,6 +183,7 @@ class IngredientCreateSerializer(serializers.ModelSerializer):
 
 
 class RecipePostOrPatchSerializer(serializers.ModelSerializer):
+    id = serializers.ReadOnlyField()
     author = serializers.HiddenField(default=serializers.CurrentUserDefault())
     ingredients = IngredientCreateSerializer(many=True, required=True)
     tags = serializers.PrimaryKeyRelatedField(queryset=Tag.objects.all(), many=True)
@@ -191,6 +192,7 @@ class RecipePostOrPatchSerializer(serializers.ModelSerializer):
     class Meta:
         model = Recipe
         fields = [
+            "id",
             "ingredients",
             "tags",
             "image",
@@ -199,6 +201,13 @@ class RecipePostOrPatchSerializer(serializers.ModelSerializer):
             "cooking_time",
             "author",
         ]
+    
+    def validate(self, data):
+        # Check if ingredients field is empty
+        if not data.get('ingredients'):
+            raise ValidationError({"ingredients": "Recipe should have at least one ingredient. d:"})
+
+        return data
 
     def create(self, validated_data):
         # Извлечение данных ингредиентов
