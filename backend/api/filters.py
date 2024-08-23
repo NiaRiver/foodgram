@@ -1,5 +1,5 @@
 import django_filters
-from core.models import Recipe, Tag
+from core.models import Ingredient, Recipe, Tag
 
 
 class RecipeFilter(django_filters.FilterSet):
@@ -29,3 +29,25 @@ class RecipeFilter(django_filters.FilterSet):
                 return queryset.filter(in_shopping_cart__user=self.request.user)
             return queryset.exclude(in_shopping_cart__user=self.request.user)
         return queryset
+
+
+class RecipeFilterSet(django_filters.FilterSet):
+    tags = django_filters.ModelMultipleChoiceFilter(
+        field_name='tags__slug',
+        queryset=Tag.objects.all(),
+        to_field_name='slug',
+        conjoined=True,  # This ensures that all tags must be matched
+        lookup_expr='in'  # Use 'in' to match any of the provided slugs
+    )
+
+    class Meta:
+        model = Recipe
+        fields = ['tags']
+
+
+class IngredientFilter(django_filters.rest_framework.FilterSet):
+    name = django_filters.rest_framework.CharFilter(field_name='name', lookup_expr='startswith')
+
+    class Meta:
+        model = Ingredient
+        fields = ['name']
