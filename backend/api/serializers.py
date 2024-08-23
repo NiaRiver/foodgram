@@ -187,7 +187,7 @@ class RecipePostOrPatchSerializer(serializers.ModelSerializer):
     author = serializers.HiddenField(default=serializers.CurrentUserDefault())
     ingredients = IngredientCreateSerializer(many=True, required=True)
     tags = serializers.PrimaryKeyRelatedField(queryset=Tag.objects.all(), many=True)
-    image = Base64ImageField(required=True) 
+    image = Base64ImageField(required=True)
 
     class Meta:
         model = Recipe
@@ -206,7 +206,9 @@ class RecipePostOrPatchSerializer(serializers.ModelSerializer):
         # Check if ingredients field is empty
         if not data.get('ingredients'):
             raise ValidationError({"ingredients": "Recipe should have at least one ingredient. d:"})
-
+        for item in data.get('ingredients'):
+            if item['amount'] < 1:
+                raise ValidationError({"ingredients": "amount should be greater or equal 1. d:"})
         return data
 
     def create(self, validated_data):
