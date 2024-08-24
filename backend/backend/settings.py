@@ -118,6 +118,10 @@ DJOSER = {
         'current_user': 'api.serializers.UserSerializer',
         'user_create': 'api.serializers.UserCreateSerializer',
     },
+    'PERMISSIONS': {
+        'user': ['djoser.permissions.CurrentUserOrAdminOrReadOnly'],
+        'user_list': ['rest_framework.permissions.AllowAny'],
+    },
 }
 
 # Константы

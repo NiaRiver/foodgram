@@ -1,5 +1,8 @@
 import django_filters
 from core.models import Ingredient, Recipe, Tag
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 class RecipeFilter(django_filters.FilterSet):
@@ -39,10 +42,13 @@ class RecipeFilterSet(django_filters.FilterSet):
         conjoined=True,  # This ensures that all tags must be matched
         lookup_expr='in'  # Use 'in' to match any of the provided slugs
     )
+    author = django_filters.ModelChoiceFilter(
+        queryset=User.objects.all()
+    )
 
     class Meta:
         model = Recipe
-        fields = ['tags']
+        fields = ['tags', 'author']
 
 
 class IngredientFilter(django_filters.rest_framework.FilterSet):

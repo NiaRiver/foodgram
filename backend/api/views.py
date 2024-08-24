@@ -20,9 +20,10 @@ from .serializers import (
     RecipeListOrRetrieveSerializer,
     RecipePostOrPatchSerializer,
     TagSerializer,
-    GetOrRetriveIngredientSerializer,
+    GetOrRetrieveIngredientSerializer,
     FavoriteSerializer,
     ShoppingCartSerializer,
+    SubList
 )
 from core.models import Subscription, FavoriteRecipe
 from django.core.exceptions import PermissionDenied
@@ -30,8 +31,11 @@ from django.http import Http404
 from django import urls
 from django.shortcuts import redirect
 from django_filters.rest_framework import DjangoFilterBackend
-from .filters import IngredientFilter, Recipe, RecipeFilterSet
+from rest_framework.permissions import AllowAny
 from core.models import Recipe, ShortenedRecipeURL, Ingredient, Tag, ShoppingCart
+from .filters import IngredientFilter, RecipeFilterSet
+from .pagination import LimitPagination, SubLimitPagination
+from .permissions import ReadOnly, IsAuthorOrReadOnly
 from .serializers import RecipeLinkSerializer
 
 User = get_user_model()
@@ -40,6 +44,7 @@ User = get_user_model()
 class UserListView(generics.ListAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
+    permission_classes = [ReadOnly]
 
 
 class UserAvatarUpdateView(RetrieveUpdateDestroyAPIView):
@@ -70,28 +75,20 @@ class UserAvatarUpdateView(RetrieveUpdateDestroyAPIView):
 
 
 class SubscriptionsListView(ListAPIView):
-    serializer_class = SubscriptionSerializer
+    serializer_class = SubList
+    pagination_class = SubLimitPagination
 
-    def get_queryset(self):
-        # Get the current user (if the user is not authenticated, you may want to handle this case)
+    def get_queryset(self): 
         user = self.request.user
-
-        # If the user is not authenticated, return an empty queryset instead of raising an error
-
-        # Filter the subscriptions where the current user is the `subscribed_to` user
         subscriptions = Subscription.objects.filter(user=user)
-
-        # Get the users who have subscribed to the current user
         subscribed_users = User.objects.filter(
             id__in=subscriptions.values("subscribed_to")
         )
-
-        # Return the queryset or an empty queryset if no subscriptions exist
-        return subscribed_users if subscriptions.exists() else User.objects.none()
+        return subscriptions if subscriptions.exists() else Subscription.objects.none()
 
 
 class SubscribeCreateDestroyView(CreateModelMixin, DestroyModelMixin, GenericViewSet):
-    serializer_class = SubscribeSerializer
+    serializer_class = SubscriptionSerializer
 
     def get_object(self):
         pk = self.kwargs.get("pk")
@@ -101,52 +98,34 @@ class SubscribeCreateDestroyView(CreateModelMixin, DestroyModelMixin, GenericVie
         )
 
     def perform_create(self, serializer):
+        serializer.save()
+
+    def create(self, request, *args, **kwargs):
         pk = self.kwargs.get("pk")
         subscribed_to = get_object_or_404(User, pk=pk)
 
-        # Check if the subscription already exists
-        if self.request.user == subscribed_to:
-            raise ValidationError("You cannot subscribe to yourself.")
-
-        if Subscription.objects.filter(
-            user=self.request.user, subscribed_to=subscribed_to
-        ).exists():
-            raise ValidationError("You are already subscribed to this user.")
-
-        serializer.save(user=self.request.user, subscribed_to=subscribed_to)
-
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(
-            data={}
-        )  # Empty data since `subscribed_to` is set internally
+        # Initialize serializer with the primary key of subscribed_to
+        serializer = self.get_serializer(data={"subscribed_to": subscribed_to.id, "user": request.user.id})
         serializer.is_valid(raise_exception=True)
+
+        # Try saving and handling potential errors
         try:
             self.perform_create(serializer)
             headers = self.get_success_headers(serializer.data)
-
-            # Get the `subscribed_to` user instance
-            subscribed_to_user = serializer.instance.subscribed_to
-
-            # Serialize the `subscribed_to` user using the `UserDetailSerializer`
-            user_detail_serializer = SubscriptionSerializer(
-                subscribed_to_user, context={"request": request}
-            )
-            data = user_detail_serializer.data
-
-            return Response(data, status=status.HTTP_201_CREATED, headers=headers)
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
         except ValidationError as e:
             return Response({"errors": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        except PermissionDenied as e:
-            return Response({"detail": str(e)}, status=status.HTTP_403_FORBIDDEN)
-        except Http404 as e:
-            return Response({"detail": str(e)}, status=status.HTTP_404_NOT_FOUND)
+
+
 
 
 class RecipeViewSet(ModelViewSet):
     queryset = Recipe.objects.all()
+    pagination_class = LimitPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ["author", "tags"]
     filterset_class = RecipeFilterSet
+    permission_classes = [IsAuthorOrReadOnly]
 
     def get_serializer_class(self):
         if self.action in ["list", "retrieve"]:
@@ -157,6 +136,8 @@ class RecipeViewSet(ModelViewSet):
 
 
 class RecipeLinkView(APIView):
+    permission_classes = [AllowAny]
+
     def get(self, request, id):
         try:
             recipe = Recipe.objects.get(pk=id)
@@ -177,14 +158,15 @@ def redirect_to_original(request, short_code):
 
 class IngredientViewSet(ReadOnlyModelViewSet):
     queryset = Ingredient.objects.all()
-    serializer_class = GetOrRetriveIngredientSerializer
-    # filter_backends = (DjangoFilterBackend,)
+    serializer_class = GetOrRetrieveIngredientSerializer
     filterset_class = IngredientFilter
+    permission_classes = [AllowAny]
     pagination_class = None
 
 
 class TagViewSet(ReadOnlyModelViewSet):
     queryset = Tag.objects.all()
+    permission_classes = [AllowAny]
     serializer_class = TagSerializer
     pagination_class = None
 
@@ -234,14 +216,10 @@ class ShoppingCartView(CreateModelMixin, DestroyModelMixin, GenericViewSet):
     def create(self, request, *args, **kwargs):
         recipe_id = self.kwargs.get("id")
         recipe = get_object_or_404(Recipe, id=recipe_id)
-
-        # Поскольку user передается в request и уже есть в контексте, добавим его к данным
         data = {"user": request.user.id, "recipe": recipe.id}
 
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
-
-        # Теперь сохраняем данные, передавая recipe
         serializer.save(recipe=recipe, user=request.user)
 
         headers = self.get_success_headers(serializer.data)

@@ -2,6 +2,7 @@ from rest_framework.generics import RetrieveAPIView
 from rest_framework.routers import DefaultRouter
 from django.contrib.auth import get_user_model
 from django.urls import path, include
+from .views import ReadOnly
 from .views import (
     UserAvatarUpdateView,
     SubscriptionsListView,
@@ -35,7 +36,11 @@ urlpatterns = [
     path('recipes/<int:id>/get-link/', RecipeLinkView.as_view(), name='get-recipe-link'),
     path('recipes/<int:id>/shopping_cart/', ShoppingCartView.as_view(SUBSCRIBE), name='shopping_cart'),
     path('', include(router.urls)),
-    path('users/<int:pk>/', RetrieveAPIView.as_view(queryset=User.objects.all(), serializer_class=UserSerializer), name='user_detail'),
+    path('users/<int:pk>/', RetrieveAPIView.as_view(
+        queryset=User.objects.all(),
+        serializer_class=UserSerializer,
+        permission_classes=[ReadOnly]
+    ), name='user_detail'),
     path('users/subscriptions/', SubscriptionsListView.as_view(), name='subscriptions'),
     path('users/<int:pk>/subscribe/', SubscribeCreateDestroyView.as_view(SUBSCRIBE), name='subscribe'),
     path('', include('djoser.urls')),
