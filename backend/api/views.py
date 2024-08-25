@@ -78,12 +78,12 @@ class SubscriptionsListView(ListAPIView):
     serializer_class = SubList
     pagination_class = SubLimitPagination
 
-    def get_queryset(self): 
+    def get_queryset(self):
         user = self.request.user
         subscriptions = Subscription.objects.filter(user=user)
-        subscribed_users = User.objects.filter(
-            id__in=subscriptions.values("subscribed_to")
-        )
+        # subscribed_users = User.objects.filter(
+        #     id__in=subscriptions.values("subscribed_to")
+        # )
         return subscriptions if subscriptions.exists() else Subscription.objects.none()
 
 
@@ -116,6 +116,25 @@ class SubscribeCreateDestroyView(CreateModelMixin, DestroyModelMixin, GenericVie
         except ValidationError as e:
             return Response({"errors": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+    def destroy(self, request, *args, **kwargs):
+        user = request.user
+        subscribed_to_id = kwargs.get('pk')
+        # Проверяем, существует ли автор, на которого пытаемся отписаться
+        try:
+            author = User.objects.get(pk=subscribed_to_id)
+        except User.DoesNotExist:
+            # Если автор не существует, возвращаем 404 Not Found
+            return Response({'error': 'Author not found.'}, status=status.HTTP_404_NOT_FOUND)
+        # Пытаемся найти подписку
+        subscription = Subscription.objects.filter(user=user, subscribed_to=author).first()
+        if not subscription:
+            # Если подписка не найдена, возвращаем 400 Bad Request
+            return Response({'error': 'Subscription does not exist.'}, status=status.HTTP_400_BAD_REQUEST)
+        # Удаляем подписку
+        subscription.delete()
+        # Возвращаем успешный ответ
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 
 
@@ -123,8 +142,8 @@ class RecipeViewSet(ModelViewSet):
     queryset = Recipe.objects.all()
     pagination_class = LimitPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filterset_fields = ["author", "tags"]
     filterset_class = RecipeFilterSet
+    filterset_fields = ["author", "tags", "is_favorited", "is_in_shopping_cart"]
     permission_classes = [IsAuthorOrReadOnly]
 
     def get_serializer_class(self):
@@ -204,7 +223,7 @@ class FavoriteView(ModelViewSet):
         except FavoriteRecipe.DoesNotExist:
             return Response(
                 {"detail": "This recipe is not in your favorites."},
-                status=status.HTTP_404_NOT_FOUND,
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
 
@@ -217,6 +236,12 @@ class ShoppingCartView(CreateModelMixin, DestroyModelMixin, GenericViewSet):
         recipe_id = self.kwargs.get("id")
         recipe = get_object_or_404(Recipe, id=recipe_id)
         data = {"user": request.user.id, "recipe": recipe.id}
+
+        if ShoppingCart.objects.filter(user=request.user, recipe=recipe).exists():
+            return Response(
+                {'error': 'Recipe already in shopping cart.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)

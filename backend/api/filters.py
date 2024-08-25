@@ -5,50 +5,37 @@ from django.contrib.auth import get_user_model
 User = get_user_model()
 
 
-class RecipeFilter(django_filters.FilterSet):
-    author = django_filters.NumberFilter(field_name="author")
-    tags = django_filters.ModelMultipleChoiceFilter(
-        field_name="tags", queryset=Tag.objects.all()
-    )
-    is_favorited = django_filters.BooleanFilter(method="filter_is_favorited")
-    is_in_shopping_cart = django_filters.BooleanFilter(
-        method="filter_is_in_shopping_cart"
-    )
+class RecipeFilterSet(django_filters.FilterSet):
+    tags = django_filters.CharFilter(method='filter_tags')
+    author = django_filters.ModelChoiceFilter(queryset=User.objects.all())
+    is_favorited = django_filters.CharFilter(method='filter_is_favorited')
+    is_in_shopping_cart = django_filters.CharFilter(method='filter_is_in_shopping_cart')
 
     class Meta:
         model = Recipe
-        fields = ["author", "tags", "is_favorited", "is_in_shopping_cart"]
+        fields = ['tags', 'author', 'is_favorited', 'is_in_shopping_cart']
+
+    def filter_tags(self, queryset, name, value):
+        tag_slugs = self.request.GET.getlist('tags')
+        return queryset.filter(tags__slug__in=tag_slugs).distinct()
 
     def filter_is_favorited(self, queryset, name, value):
-        if self.request.user.is_authenticated:
-            if value:
-                return queryset.filter(favorited_by__user=self.request.user)
-            return queryset.exclude(favorited_by__user=self.request.user)
-        return queryset
+        user = self.request.user
+        if user and user.is_authenticated:
+            is_favorited = value in [True, "1", "true", "True", 1]
+            if is_favorited:
+                return queryset.filter(favorited_by__user=user).distinct()
+            return queryset.exclude(favorited_by__user=user).distinct()
+        return queryset.none() if value else queryset
 
     def filter_is_in_shopping_cart(self, queryset, name, value):
-        if self.request.user.is_authenticated:
-            if value:
-                return queryset.filter(in_shopping_cart__user=self.request.user)
-            return queryset.exclude(in_shopping_cart__user=self.request.user)
-        return queryset
-
-
-class RecipeFilterSet(django_filters.FilterSet):
-    tags = django_filters.ModelMultipleChoiceFilter(
-        field_name='tags__slug',
-        queryset=Tag.objects.all(),
-        to_field_name='slug',
-        conjoined=True,  # This ensures that all tags must be matched
-        lookup_expr='in'  # Use 'in' to match any of the provided slugs
-    )
-    author = django_filters.ModelChoiceFilter(
-        queryset=User.objects.all()
-    )
-
-    class Meta:
-        model = Recipe
-        fields = ['tags', 'author']
+        user = self.request.user
+        if user and user.is_authenticated:
+            is_in_cart = value in [True, "1", "true", "True"]
+            if is_in_cart:
+                return queryset.filter(shopping_cart_by__user=user).distinct()
+            return queryset.exclude(shopping_cart_by__user=user).distinct()
+        return queryset.none() if value else queryset
 
 
 class IngredientFilter(django_filters.rest_framework.FilterSet):

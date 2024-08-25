@@ -88,6 +88,9 @@ class SubList(serializers.ModelSerializer):
 
     def get_recipes(self, obj):
         recipes = Recipe.objects.filter(author=obj.subscribed_to)
+        limit = self.context['request'].query_params.get('recipes_limit', None)
+        if limit:
+            recipes = recipes[:int(limit)]
         return [
             {
                 "id": recipe.id,
@@ -144,7 +147,10 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         return Subscription.objects.filter(user=user, subscribed_to=obj.subscribed_to).exists()
 
     def get_recipes(self, obj):
+        limit = self.context['request'].query_params.get('recipes_limit', None)
         recipes = Recipe.objects.filter(author=obj.subscribed_to)
+        if limit:
+            recipes = recipes[:int(limit)]
         return [
             {
                 "id": recipe.id,
@@ -244,8 +250,8 @@ class RecipeListOrRetrieveSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, read_only=True)
     author = UserSerializer(read_only=True)
     ingredients = IngredientSerializer(many=True, read_only=True)
-    is_favorited = serializers.BooleanField(read_only=True, default=False)
-    is_in_shopping_cart = serializers.BooleanField(read_only=True, default=False)
+    is_favorited = serializers.SerializerMethodField(read_only=True)
+    is_in_shopping_cart = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Recipe
@@ -263,10 +269,16 @@ class RecipeListOrRetrieveSerializer(serializers.ModelSerializer):
         ]
 
     def get_is_favorited(self, obj):
-        user = self.context["request"].user
-        if user.is_anonymous:
-            return False
-        return FavoriteRecipe.objects.filter(user=user, recipe=obj).exists()
+        user = self.context['request'].user
+        if user and user.is_authenticated:
+            return obj.is_favorited_by(user)
+        return False
+
+    def get_is_in_shopping_cart(self, obj):
+        user = self.context['request'].user
+        if user and user.is_authenticated:
+            return obj.is_in_shopping_cart_by(user)
+        return False
 
 
 ################################################################
@@ -446,6 +458,10 @@ class FavoriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = FavoriteRecipe
         fields = ["user", "recipe"]
+
+    def to_representation(self, instance):
+        repr = super().to_representation(instance)
+        return {"id": instance.id, "name": instance.recipe.name, "image": instance.recipe.image.url, "cooking_time": instance.recipe.cooking_time}
 
 
 class ShoppingCartSerializer(serializers.ModelSerializer):

@@ -80,6 +80,13 @@ class Recipe(models.Model):
     def __str__(self):
         return self.name
 
+    def is_favorited_by(self, user):
+        return FavoriteRecipe.objects.filter(user=user, recipe=self).exists()
+
+    def is_in_shopping_cart_by(self, user):
+        return ShoppingCart.objects.filter(user=user, recipe=self).exists()
+
+
 
 class RecipeIngredient(models.Model):
     recipe = models.ForeignKey(

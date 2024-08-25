@@ -7,5 +7,5 @@ class LimitPagination(PageNumberPagination):
 
 
 class SubLimitPagination(PageNumberPagination):
-    page_size_query_param = 'recipe_limit'
+    page_size_query_param = 'limit'
     max_page_size = 100

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import User, Subscription, Recipe, Tag, Ingredient, RecipeIngredient
+from .models import User, Subscription, Recipe, Tag, Ingredient, RecipeIngredient, FavoriteRecipe, ShoppingCart
 
 
 @admin.register(User)
@@ -39,3 +39,15 @@ class RecipeIngredientAdmin(admin.ModelAdmin):
     list_display = ('id', 'recipe', 'ingredient', 'amount')
     search_fields = ('recipe__name', 'ingredient__name')
     raw_id_fields = ('recipe', 'ingredient')
+
+@admin.register(FavoriteRecipe)
+class FavoriteRecipeAdmin(admin.ModelAdmin):
+    list_display = ('id', 'recipe', 'user')
+    search_fields = ('recipe__name', 'user__username')
+    raw_id_fields = ('recipe', 'user')
+
+@admin.register(ShoppingCart)
+class ShoppingCartAdmin(admin.ModelAdmin):
+    list_display = ('id', 'recipe', 'user')
+    search_fields = ('recipe__name', 'user__username')
+    raw_id_fields = ('recipe', 'user')
