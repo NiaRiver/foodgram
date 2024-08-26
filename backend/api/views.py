@@ -288,7 +288,7 @@ class DownloadShoppingListView(APIView):
         ingredients = (
             RecipeIngredient.objects
             .filter(recipe__shopping_cart_by__user=request.user)
-            .values('ingredient__name', 'ingredient__unit')
+            .values('ingredient__name', 'ingredient__measurement_unit')
             .annotate(total_amount=Sum('amount'))
             .order_by('ingredient__name')
         )
@@ -302,7 +302,7 @@ class DownloadShoppingListView(APIView):
                 {
                     'product': ingredient['ingredient__name'],
                     'amount': ingredient['total_amount'],
-                    'unit': ingredient['ingredient__unit'],
+                    'unit': ingredient['ingredient__measurement_unit'],
                 }
                 for ingredient in chunk
             ]}

@@ -228,7 +228,7 @@ class TagSerializer(serializers.ModelSerializer):
 class IngredientSerializer(serializers.ModelSerializer):
     class Meta:
         model = Ingredient
-        fields = ["id", "name", "unit"]
+        fields = ["id", "name", "measurement_unit"]
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -239,7 +239,7 @@ class TagSerializer(serializers.ModelSerializer):
 
 class IngredientSerializer(serializers.ModelSerializer):
     name = serializers.CharField(source="ingredient.name")
-    measurement_unit = serializers.CharField(source="ingredient.unit")
+    measurement_unit = serializers.CharField(source="ingredient.measurement_unit")
 
     class Meta:
         model = RecipeIngredient
@@ -408,7 +408,7 @@ class RecipePostOrPatchSerializer(serializers.ModelSerializer):
             ingredients.append({
                 'id': ingredient.id,
                 'name': ingredient.name,
-                'measurement_unit': ingredient.unit,
+                'measurement_unit': ingredient.measurement_unit,
                 'amount': recipe_ingredient.amount
             })
         representation['ingredients'] = ingredients
@@ -448,7 +448,7 @@ class RecipeLinkSerializer(serializers.ModelSerializer):
 
 
 class GetOrRetrieveIngredientSerializer(serializers.ModelSerializer):
-    measurement_unit = serializers.CharField(source="unit")
+    measurement_unit = serializers.CharField()
     class Meta:
         model = Ingredient
         fields = ["id", "name", "measurement_unit"]

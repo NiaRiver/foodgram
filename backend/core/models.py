@@ -59,7 +59,7 @@ class Tag(models.Model):
 
 class Ingredient(models.Model):
     name = models.CharField(max_length=100, unique=True)
-    unit = models.CharField(max_length=50, unique=False)
+    measurement_unit = models.CharField(max_length=50, unique=False)
 
     def __str__(self):
         return self.name
@@ -104,7 +104,7 @@ class RecipeIngredient(models.Model):
         verbose_name_plural = "Recipe Ingredients"
 
     def __str__(self):
-        return f"{self.amount} {self.ingredient.unit} of {self.ingredient.name} in {self.recipe.name}"
+        return f"{self.amount} {self.ingredient.measurement_unit} of {self.ingredient.name} in {self.recipe.name}"
 
 
 def generate_short_code(length=6):
@@ -159,12 +159,12 @@ class ShoppingCart(models.Model):
 
     # def get_ingredients(self):
     #     """
-    #     Returns a list of dictionaries containing the name, total amount, and unit of each ingredient
+    #     Returns a list of dictionaries containing the name, total amount, and measurement_unit of each ingredient
     #     required for all recipes in this user's shopping cart, without repeating ingredients.
     #     """
     #     ingredients = (
     #         RecipeIngredient.objects.filter(recipe__shopping_cart_by__user=self.user)
-    #         .values('ingredient__name', 'ingredient__unit')
+    #         .values('ingredient__name', 'ingredient__measurement_unit')
     #         .annotate(total_amount=Sum('amount'))
     #     )
 
@@ -172,7 +172,7 @@ class ShoppingCart(models.Model):
     #         {
     #             'name': ingredient['ingredient__name'],
     #             'amount': ingredient['total_amount'],
-    #             'unit': ingredient['ingredient__unit']
+    #             'measurement_unit': ingredient['ingredient__unit']
     #         }
     #         for ingredient in ingredients
     #     ]
