@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.db.models import Count
 
 from .models import (FavoriteRecipe, Ingredient, Recipe, RecipeIngredient,
                      ShoppingCart, Subscription, Tag, User)
@@ -20,11 +21,20 @@ class SubscriptionAdmin(admin.ModelAdmin):
 
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
-    list_display = ('id', 'author', 'name', 'cooking_time')
+    list_display = ('id', 'name', 'author', 'cooking_time', 'times_favorited')
     search_fields = ('name', 'author__username')
     list_filter = ('tags', 'author')
     raw_id_fields = ('author',)
     filter_horizontal = ('tags',)
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        qs = qs.annotate(_times_favorited=Count('favorited_by'))
+        return qs
+
+    def times_favorited(self, obj):
+        return obj._times_favorited
+    times_favorited.short_description = 'Times Favorited'
 
 
 @admin.register(Tag)
