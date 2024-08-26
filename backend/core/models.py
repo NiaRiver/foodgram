@@ -1,11 +1,11 @@
-import string
 import random
+import string
 
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models
-from django.db.models import Sum
 from django.utils import timezone
-from django.conf import settings
+
 from .validators import validate_username
 
 
@@ -26,7 +26,9 @@ class User(AbstractUser):
         max_length=settings.MAX_LENGTH_NAME, verbose_name="Last Name"
     )
     avatar = models.ImageField(
-        upload_to="users/avatars", verbose_name="Фото профиля", null=True, default=None
+        upload_to="users/avatars",
+        verbose_name="Фото профиля",
+        null=True, default=None
     )
 
     def __str__(self):
@@ -66,7 +68,8 @@ class Ingredient(models.Model):
 
 
 class Recipe(models.Model):
-    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name="recipes")
+    author = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="recipes")
     name = models.CharField(max_length=100)
     image = models.ImageField(upload_to="recipes/images/")
     text = models.TextField()
@@ -88,7 +91,6 @@ class Recipe(models.Model):
         return ShoppingCart.objects.filter(user=user, recipe=self).exists()
 
 
-
 class RecipeIngredient(models.Model):
     recipe = models.ForeignKey(
         Recipe, on_delete=models.CASCADE, related_name="ingredients"
@@ -104,7 +106,8 @@ class RecipeIngredient(models.Model):
         verbose_name_plural = "Recipe Ingredients"
 
     def __str__(self):
-        return f"{self.amount} {self.ingredient.measurement_unit} of {self.ingredient.name} in {self.recipe.name}"
+        return (f"{self.amount} {self.ingredient.measurement_unit} "
+                f"of {self.ingredient.name} in {self.recipe.name}")
 
 
 def generate_short_code(length=6):
@@ -135,11 +138,10 @@ class FavoriteRecipe(models.Model):
     added_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ("user", "recipe")  # Уникальная пара User-Recipe
+        unique_together = ("user", "recipe")
 
     def __str__(self):
         return f"{self.user.username} -> {self.recipe.name}"
-
 
 
 class ShoppingCart(models.Model):
@@ -152,29 +154,8 @@ class ShoppingCart(models.Model):
     added_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ("user", "recipe")  # Уникальная пара User-Recipe
+        unique_together = ("user", "recipe")
 
     def __str__(self):
-        return f"{self.user.username} -> {self.recipe.name}"
-
-    # def get_ingredients(self):
-    #     """
-    #     Returns a list of dictionaries containing the name, total amount, and measurement_unit of each ingredient
-    #     required for all recipes in this user's shopping cart, without repeating ingredients.
-    #     """
-    #     ingredients = (
-    #         RecipeIngredient.objects.filter(recipe__shopping_cart_by__user=self.user)
-    #         .values('ingredient__name', 'ingredient__measurement_unit')
-    #         .annotate(total_amount=Sum('amount'))
-    #     )
-
-    #     ingredient_list = [
-    #         {
-    #             'name': ingredient['ingredient__name'],
-    #             'amount': ingredient['total_amount'],
-    #             'measurement_unit': ingredient['ingredient__unit']
-    #         }
-    #         for ingredient in ingredients
-    #     ]
-
-    #     return ingredient_list
+        return (f"{self.user.username} -> "
+                f"{self.recipe.name}")

@@ -102,7 +102,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-################################
+
 AUTH_USER_MODEL = 'core.User'
 
 REST_FRAMEWORK = {
@@ -117,7 +117,7 @@ REST_FRAMEWORK = {
         'rest_framework.filters.SearchFilter',
     ),
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 6,  # Количество записей на одной странице
+    'PAGE_SIZE': 6,
 }
 
 DJOSER = {
@@ -133,7 +133,7 @@ DJOSER = {
     },
 }
 
-# Константы
+
 MAX_LENGTH_NAME = 150
 MAX_LENGTH_EMAIL = 254
 MAX_LENGTH_PASSWORD = 128

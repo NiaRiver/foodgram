@@ -1,48 +1,36 @@
 from io import BytesIO
-from django.db.models import Sum
-from django.utils import timezone
-from rest_framework import generics, status
-from rest_framework.response import Response
-from rest_framework import filters
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.generics import (
-    RetrieveUpdateDestroyAPIView,
-    ListAPIView,
-    get_object_or_404,
-    ValidationError,
-)
-from rest_framework.views import APIView
-from rest_framework.mixins import CreateModelMixin, DestroyModelMixin
-from rest_framework.viewsets import GenericViewSet, ModelViewSet, ReadOnlyModelViewSet
-from django.contrib.auth import get_user_model
-from .serializers import (
-    UserSerializer,
-    AvatarSerializer,
-    SubscriptionSerializer,
-    SubscribeSerializer,
-    RecipeListOrRetrieveSerializer,
-    RecipePostOrPatchSerializer,
-    TagSerializer,
-    GetOrRetrieveIngredientSerializer,
-    FavoriteSerializer,
-    ShoppingCartSerializer,
-    SubList
-)
-from core.models import RecipeIngredient, Subscription, FavoriteRecipe
-from django.core.exceptions import PermissionDenied
-from django.http import FileResponse, Http404
+
+from core.models import (FavoriteRecipe, Ingredient, Recipe, RecipeIngredient,
+                         ShoppingCart, ShortenedRecipeURL, Subscription, Tag)
 from django import urls
-from django.shortcuts import redirect
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
+from django.db.models import Sum
 from django.http import HttpResponse
-from core.models import Recipe, ShortenedRecipeURL, Ingredient, Tag, ShoppingCart
+from django.shortcuts import redirect
+from django.utils import timezone
+from django_filters.rest_framework import DjangoFilterBackend
+from PyPDF2 import PdfMerger
+from rest_framework import filters, generics, status
+from rest_framework.generics import (ListAPIView, RetrieveUpdateDestroyAPIView,
+                                     get_object_or_404)
+from rest_framework.mixins import CreateModelMixin, DestroyModelMixin
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework.viewsets import (GenericViewSet, ModelViewSet,
+                                     ReadOnlyModelViewSet)
+
 from .filters import IngredientFilter, RecipeFilterSet
 from .pagination import LimitPagination, SubLimitPagination, paginate_list
-from .permissions import ReadOnly, IsAuthorOrReadOnly
-from .serializers import RecipeLinkSerializer
+from .permissions import IsAuthorOrReadOnly, ReadOnly
+from .serializers import (AvatarSerializer, FavoriteSerializer,
+                          GetOrRetrieveIngredientSerializer,
+                          RecipeLinkSerializer, RecipeListOrRetrieveSerializer,
+                          RecipePostOrPatchSerializer, ShoppingCartSerializer,
+                          SubList, SubscriptionSerializer, TagSerializer,
+                          UserSerializer)
 from .services import pdf_over_template
-from PyPDF2 import PdfMerger
 
 User = get_user_model()
 
@@ -67,12 +55,14 @@ class UserAvatarUpdateView(RetrieveUpdateDestroyAPIView):
 
         if serializer.is_valid():
             serializer.save()
-            return Response({"status": "Avatar updated"}, status=status.HTTP_200_OK)
+            return Response(
+                {"status": "Avatar updated"}, status=status.HTTP_200_OK
+            )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, *args, **kwargs):
         try:
-            user: User = get_object_or_404(User, pk=self.request.user.id)
+            user = get_object_or_404(User, pk=self.request.user.id)
             user.avatar = None
             user.save()
             return Response(status=status.HTTP_204_NO_CONTENT)
@@ -87,13 +77,15 @@ class SubscriptionsListView(ListAPIView):
     def get_queryset(self):
         user = self.request.user
         subscriptions = Subscription.objects.filter(user=user)
-        # subscribed_users = User.objects.filter(
-        #     id__in=subscriptions.values("subscribed_to")
-        # )
-        return subscriptions if subscriptions.exists() else Subscription.objects.none()
+        return (
+            subscriptions if subscriptions.exists()
+            else Subscription.objects.none()
+        )
 
 
-class SubscribeCreateDestroyView(CreateModelMixin, DestroyModelMixin, GenericViewSet):
+class SubscribeCreateDestroyView(
+    CreateModelMixin, DestroyModelMixin, GenericViewSet
+):
     serializer_class = SubscriptionSerializer
 
     def get_object(self):
@@ -103,7 +95,8 @@ class SubscribeCreateDestroyView(CreateModelMixin, DestroyModelMixin, GenericVie
             Subscription, user=self.request.user, subscribed_to=subscribed_to
         )
 
-    def perform_create(self, serializer):
+    @staticmethod
+    def perform_create(serializer):
         serializer.save()
 
     def create(self, request, *args, **kwargs):
@@ -111,37 +104,45 @@ class SubscribeCreateDestroyView(CreateModelMixin, DestroyModelMixin, GenericVie
         subscribed_to = get_object_or_404(User, pk=pk)
 
         # Initialize serializer with the primary key of subscribed_to
-        serializer = self.get_serializer(data={"subscribed_to": subscribed_to.id, "user": request.user.id})
+        serializer = self.get_serializer(
+            data={"subscribed_to": subscribed_to.id, "user": request.user.id}
+        )
         serializer.is_valid(raise_exception=True)
 
         # Try saving and handling potential errors
         try:
             self.perform_create(serializer)
             headers = self.get_success_headers(serializer.data)
-            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+            return Response(
+                serializer.data,
+                status=status.HTTP_201_CREATED,
+                headers=headers
+            )
         except ValidationError as e:
-            return Response({"errors": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"errors": str(e)}, status=status.HTTP_400_BAD_REQUEST
+            )
 
-    def destroy(self, request, *args, **kwargs):
+    @staticmethod
+    def destroy(request, *args, **kwargs):
         user = request.user
-        subscribed_to_id = kwargs.get('pk')
-        # Проверяем, существует ли автор, на которого пытаемся отписаться
+        subscribed_to_id = kwargs.get("pk")
         try:
             author = User.objects.get(pk=subscribed_to_id)
         except User.DoesNotExist:
-            # Если автор не существует, возвращаем 404 Not Found
-            return Response({'error': 'Author not found.'}, status=status.HTTP_404_NOT_FOUND)
-        # Пытаемся найти подписку
-        subscription = Subscription.objects.filter(user=user, subscribed_to=author).first()
+            return Response(
+                {'error': 'Author not found.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        subscription = Subscription.objects.filter(
+            user=user, subscribed_to=author).first()
         if not subscription:
-            # Если подписка не найдена, возвращаем 400 Bad Request
-            return Response({'error': 'Subscription does not exist.'}, status=status.HTTP_400_BAD_REQUEST)
-        # Удаляем подписку
+            return Response(
+                {'error': 'Subscription does not exist.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         subscription.delete()
-        # Возвращаем успешный ответ
         return Response(status=status.HTTP_204_NO_CONTENT)
-
-
 
 
 class RecipeViewSet(ModelViewSet):
@@ -149,13 +150,14 @@ class RecipeViewSet(ModelViewSet):
     pagination_class = LimitPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_class = RecipeFilterSet
-    filterset_fields = ["author", "tags", "is_favorited", "is_in_shopping_cart"]
+    filterset_fields = ["author", "tags",
+                        "is_favorited", "is_in_shopping_cart"]
     permission_classes = [IsAuthorOrReadOnly]
 
     def get_serializer_class(self):
-        if self.action in ["list", "retrieve"]:
+        if self.action in {"list", "retrieve"}:
             return RecipeListOrRetrieveSerializer
-        elif self.action in ["create", "update", "partial_update"]:
+        if self.action in {"create", "update", "partial_update"}:
             return RecipePostOrPatchSerializer
         return super().get_serializer_class()
 
@@ -163,22 +165,29 @@ class RecipeViewSet(ModelViewSet):
 class RecipeLinkView(APIView):
     permission_classes = [AllowAny]
 
-    def get(self, request, id):
+    @staticmethod
+    def get(request, id):
         try:
             recipe = Recipe.objects.get(pk=id)
             if not hasattr(recipe, "shortened_url"):
                 ShortenedRecipeURL.objects.create(recipe=recipe)
-            serializer = RecipeLinkSerializer(recipe, context={"request": request})
+            serializer = RecipeLinkSerializer(
+                recipe, context={"request": request})
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Recipe.DoesNotExist:
             return Response(
-                {"detail": "Recipe not found."}, status=status.HTTP_404_NOT_FOUND
+                {"detail": "Recipe not found."},
+                status=status.HTTP_404_NOT_FOUND
             )
 
 
 def redirect_to_original(request, short_code):
     url = get_object_or_404(ShortenedRecipeURL, short_code=short_code)
-    return redirect(urls.reverse("api:recipe-detail", kwargs={"pk": url.recipe.id}))
+    return redirect(
+        urls.reverse(
+            "api:recipe-detail", kwargs={"pk": url.recipe.id}
+        )
+    )
 
 
 class IngredientViewSet(ReadOnlyModelViewSet):
@@ -203,7 +212,8 @@ class FavoriteView(ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         recipe_id = self.kwargs.get("id")  # Get recipe_id from URL
-        recipe = get_object_or_404(Recipe, id=recipe_id)  # Retrieve the Recipe instance
+        # Retrieve the Recipe instance
+        recipe = get_object_or_404(Recipe, id=recipe_id)
 
         data = {"user": request.user.id, "recipe": recipe.id}
 
@@ -218,12 +228,12 @@ class FavoriteView(ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         recipe_id = self.kwargs.get("id")  # Get recipe_id from URL
-        recipe = get_object_or_404(Recipe, id=recipe_id)  # Retrieve the Recipe instance
+        # Retrieve the Recipe instance
+        recipe = get_object_or_404(Recipe, id=recipe_id)
 
         try:
             favorite_recipe = FavoriteRecipe.objects.get(
-                recipe=recipe, user=self.request.user
-            )
+                recipe=recipe, user=self.request.user)
             favorite_recipe.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
         except FavoriteRecipe.DoesNotExist:
@@ -243,7 +253,9 @@ class ShoppingCartView(CreateModelMixin, DestroyModelMixin, GenericViewSet):
         recipe = get_object_or_404(Recipe, id=recipe_id)
         data = {"user": request.user.id, "recipe": recipe.id}
 
-        if ShoppingCart.objects.filter(user=request.user, recipe=recipe).exists():
+        if ShoppingCart.objects.filter(
+            user=request.user, recipe=recipe
+        ).exists():
             return Response(
                 {'error': 'Recipe already in shopping cart.'},
                 status=status.HTTP_400_BAD_REQUEST
@@ -263,8 +275,7 @@ class ShoppingCartView(CreateModelMixin, DestroyModelMixin, GenericViewSet):
         recipe = get_object_or_404(Recipe, id=recipe_id)
 
         shopping_cart_item = ShoppingCart.objects.filter(
-            recipe=recipe, user=request.user
-        ).first()
+            recipe=recipe, user=request.user).first()
         if request.user.is_anonymous:
             return Response(
                 {"detail": "You're unauthorized for this action."},
@@ -273,21 +284,21 @@ class ShoppingCartView(CreateModelMixin, DestroyModelMixin, GenericViewSet):
         if shopping_cart_item:
             shopping_cart_item.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
-        else:
-            return Response(
-                {"detail": "This recipe is not in your shopping cart."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        return Response(
+            {"detail": "This recipe is not in your shopping cart."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
 
 class DownloadShoppingListView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request):
+    @staticmethod
+    def get(request):
         template = 'api/shopping_list_pdf_template.html'
         ingredients = (
-            RecipeIngredient.objects
-            .filter(recipe__shopping_cart_by__user=request.user)
+            RecipeIngredient.objects.filter(
+                recipe__shopping_cart_by__user=request.user)
             .values('ingredient__name', 'ingredient__measurement_unit')
             .annotate(total_amount=Sum('amount'))
             .order_by('ingredient__name')
@@ -297,15 +308,15 @@ class DownloadShoppingListView(APIView):
 
         pdf_merger = PdfMerger()
 
-        for page_num, chunk in enumerate(paginated_ingredients):
-            context = {'shopping_list': [
-                {
+        for chunk in paginated_ingredients:
+            context = {
+                'shopping_list': [{
                     'product': ingredient['ingredient__name'],
                     'amount': ingredient['total_amount'],
                     'unit': ingredient['ingredient__measurement_unit'],
                 }
-                for ingredient in chunk
-            ]}
+                    for ingredient in chunk
+                ]}
             pdf_data = pdf_over_template(request, template, context)
 
             pdf_file = BytesIO(pdf_data['pdf'])
@@ -315,8 +326,9 @@ class DownloadShoppingListView(APIView):
         pdf_merger.write(pdf_output)
         pdf_merger.close()
         pdf_output.seek(0)
-
-        filename = f"shopping_list_{timezone.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        filename = f"shopping_list_{
+            timezone.now().strftime('%Y%m%d_%H%M%S')
+        }.pdf"
 
         response = HttpResponse(pdf_output, content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="{filename}"'

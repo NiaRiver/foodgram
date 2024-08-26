@@ -34,18 +34,46 @@ router.register(r'tags', TagViewSet, basename='tag')
 
 urlpatterns = [
     path('auth/', include('djoser.urls.authtoken')),
-    path('recipes/download_shopping_cart/', DownloadShoppingListView.as_view(), name='download_shopping_list'),
-    path('recipes/<int:id>/get-link/', RecipeLinkView.as_view(), name='get-recipe-link'),
-    path('recipes/<int:id>/shopping_cart/', ShoppingCartView.as_view(SUBSCRIBE), name='shopping_cart'),
+    path(
+        'recipes/download_shopping_cart/',
+        DownloadShoppingListView.as_view(),
+        name='download_shopping_list'
+    ),
+    path(
+        'recipes/<int:id>/get-link/',
+        RecipeLinkView.as_view(),
+        name='get-recipe-link'
+    ),
+    path(
+        'recipes/<int:id>/shopping_cart/',
+        ShoppingCartView.as_view(SUBSCRIBE),
+        name='shopping_cart'
+    ),
     path('', include(router.urls)),
     path('users/<int:pk>/', RetrieveAPIView.as_view(
         queryset=User.objects.all(),
         serializer_class=UserSerializer,
         permission_classes=[ReadOnly]
     ), name='user_detail'),
-    path('users/subscriptions/', SubscriptionsListView.as_view(), name='subscriptions'),
-    path('users/<int:pk>/subscribe/', SubscribeCreateDestroyView.as_view(SUBSCRIBE), name='subscribe'),
+    path(
+        'users/subscriptions/',
+        SubscriptionsListView.as_view(),
+        name='subscriptions'
+    ),
+    path(
+        'users/<int:pk>/subscribe/',
+        SubscribeCreateDestroyView.as_view(SUBSCRIBE),
+        name='subscribe'
+    ),
     path('', include('djoser.urls')),
-    path('users/me/avatar/', UserAvatarUpdateView.as_view(), name='user_avatar_update'),
-    path('recipes/<int:id>/favorite/', FavoriteView.as_view(SUBSCRIBE), name='favorite'),
+    path(
+        'users/me/avatar/',
+        UserAvatarUpdateView.as_view(),
+        name='user_avatar_update'
+    ),
+    path(
+        'recipes/<int:id>/favorite/',
+        FavoriteView.as_view(SUBSCRIBE),
+        name='favorite'
+    ),
 ]
