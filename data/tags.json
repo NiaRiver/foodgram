@@ -1,0 +1,22 @@
+[
+    {
+        "name": "выпечка",
+        "slug": "bakery"
+    },
+    {
+        "name": "гриль",
+        "slug": "bbq"
+    },
+    {
+        "name": "рыба",
+        "slug": "fish"
+    },
+    {
+        "name": "мясо",
+        "slug": "meat"
+    },
+    {
+        "name": "птица",
+        "slug": "chicks"
+    }
+]
