@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% block title %}About AlertTrade{% endblock %}
+{% block content %}
+{% load static %}
+{% if request.user.is_anonymous %}
+<div class="jumbotron">
+    <h1 class="display-4">About AlertTrade</h1>
+    <p class="lead"></p>
+    <hr class="my-4">
+    <p>
+        AlertTrade provides users with a powerful tool to automate their trading strategies, 
+        improving the accuracy and speed of executing trading operations. 
+    </p>
+    <p>With integration with TradingView and various exchanges, the platform offers a convenient and efficient way to manage trading.</p>
+    <p>We are pleased to offer you this platform and are confident that AlertTrade will help you achieve your trading goals.</p>
+    <a class="btn btn-primary btn-lg" href="{% url 'registration'%}" role="button">Sign Up For Free</a>
+</div>
+{% else %}
+<div class="jumbotron">
+    <h1 class="display-4">About AlertTrade</h1>
+    <p class="lead"></p>
+    <hr class="my-4">
+    <p>
+        AlertTrade provides users with a powerful tool to automate their trading strategies, 
+        improving the accuracy and speed of executing trading operations. 
+    </p>
+    <p>With integration with TradingView and various exchanges, the platform offers a convenient and efficient way to manage trading.</p>
+    <p>We are pleased to offer you this platform and are confident that AlertTrade will help you achieve your trading goals.</p>
+    <hr class="my-4">
+    <h3><b>Let's get started with creating and running our first WebHook.</b></h3>
+    <div style="margin-left: 5%;">
+        <p>1: Go to <a href="{% url 'core:webhook-create' %}">create page</a></p>
+        <p>2: Open Webhook's details page</a></p>
+        <p>3: Right click on the link from <b>Run Comands Link</b> field and copy it.</p>
+        <p>4: Now you can use it in your strategy or send POST api request and put your commands in it's body as plain text in RAW format.</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,3 +1,6 @@
+from io import BytesIO
+from django.db.models import Sum
+from django.utils import timezone
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework import filters
@@ -25,18 +28,21 @@ from .serializers import (
     ShoppingCartSerializer,
     SubList
 )
-from core.models import Subscription, FavoriteRecipe
+from core.models import RecipeIngredient, Subscription, FavoriteRecipe
 from django.core.exceptions import PermissionDenied
-from django.http import Http404
+from django.http import FileResponse, Http404
 from django import urls
 from django.shortcuts import redirect
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from django.http import HttpResponse
 from core.models import Recipe, ShortenedRecipeURL, Ingredient, Tag, ShoppingCart
 from .filters import IngredientFilter, RecipeFilterSet
-from .pagination import LimitPagination, SubLimitPagination
+from .pagination import LimitPagination, SubLimitPagination, paginate_list
 from .permissions import ReadOnly, IsAuthorOrReadOnly
 from .serializers import RecipeLinkSerializer
+from .services import pdf_over_template
+from PyPDF2 import PdfMerger
 
 User = get_user_model()
 
@@ -272,3 +278,46 @@ class ShoppingCartView(CreateModelMixin, DestroyModelMixin, GenericViewSet):
                 {"detail": "This recipe is not in your shopping cart."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+
+class DownloadShoppingListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        template = 'api/shopping_list_pdf_template.html'
+        ingredients = (
+            RecipeIngredient.objects
+            .filter(recipe__shopping_cart_by__user=request.user)
+            .values('ingredient__name', 'ingredient__unit')
+            .annotate(total_amount=Sum('amount'))
+            .order_by('ingredient__name')
+        )
+        page_size = 20
+        paginated_ingredients = paginate_list(ingredients, page_size)
+
+        pdf_merger = PdfMerger()
+
+        for page_num, chunk in enumerate(paginated_ingredients):
+            context = {'shopping_list': [
+                {
+                    'product': ingredient['ingredient__name'],
+                    'amount': ingredient['total_amount'],
+                    'unit': ingredient['ingredient__unit'],
+                }
+                for ingredient in chunk
+            ]}
+            pdf_data = pdf_over_template(request, template, context)
+
+            pdf_file = BytesIO(pdf_data['pdf'])
+            pdf_merger.append(pdf_file)
+
+        pdf_output = BytesIO()
+        pdf_merger.write(pdf_output)
+        pdf_merger.close()
+        pdf_output.seek(0)
+
+        filename = f"shopping_list_{timezone.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+
+        response = HttpResponse(pdf_output, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+{% load static %}
+{% load django_bootstrap5 %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Document{% endblock %}: AlertTrade</title>
+    <link rel="apple-touch-icon" sizes="180x180" href="{% static '/img/fav/apple-touch-icon.png' %}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{% static '/img/fav/favicon-32x32.png' %}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{% static '/img/fav/favicon-16x16.png' %}">
+    <link rel="manifest" href="{% static '/img/fav/site.webmanifest' %}">
+    <link rel="mask-icon" href="{% static '/img/fav/safari-pinned-tab.svg' %}" color="#5bbad5">
+    <meta name="msapplication-TileColor" content="#da532c">
+    <meta name="theme-color" content="#ffffff">
+
+
+    <link rel="icon" href="{% static '/img/favicon.ico' %}" type="image/x-icon">
+    <!-- Include Bootstrap CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <div class="d-flex flex-column min-vh-100">
+        <header class="mt-auto">
+            {% include 'includes/header.html' %}
+        </header>
+        <main role="main" class="flex-grow-1">
+            <div class="container">
+                {% block content %}
+                {% endblock %}
+            </div>
+        </main>
+        <footer class="mt-auto">
+            {% include 'includes/footer.html' %}
+        </footer>
+    </div>
+
+    <!-- Bootstrap and other JS scripts -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

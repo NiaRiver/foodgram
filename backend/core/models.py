@@ -3,6 +3,7 @@ import random
 
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.db.models import Sum
 from django.utils import timezone
 from django.conf import settings
 from .validators import validate_username
@@ -140,6 +141,7 @@ class FavoriteRecipe(models.Model):
         return f"{self.user.username} -> {self.recipe.name}"
 
 
+
 class ShoppingCart(models.Model):
     user = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name="shopping_cart_recipes"
@@ -154,3 +156,25 @@ class ShoppingCart(models.Model):
 
     def __str__(self):
         return f"{self.user.username} -> {self.recipe.name}"
+
+    # def get_ingredients(self):
+    #     """
+    #     Returns a list of dictionaries containing the name, total amount, and unit of each ingredient
+    #     required for all recipes in this user's shopping cart, without repeating ingredients.
+    #     """
+    #     ingredients = (
+    #         RecipeIngredient.objects.filter(recipe__shopping_cart_by__user=self.user)
+    #         .values('ingredient__name', 'ingredient__unit')
+    #         .annotate(total_amount=Sum('amount'))
+    #     )
+
+    #     ingredient_list = [
+    #         {
+    #             'name': ingredient['ingredient__name'],
+    #             'amount': ingredient['total_amount'],
+    #             'unit': ingredient['ingredient__unit']
+    #         }
+    #         for ingredient in ingredients
+    #     ]
+
+    #     return ingredient_list

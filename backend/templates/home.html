@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block title %}Home{% endblock %}
+{% block content %}
+    <div class="jumbotron">
+        <h1 class="display-4">Welcome to AlertTrade</h1>
+        <p class="lead">AlertTrade automates trading by processing TradingView alerts and executing orders on various exchanges.</p>
+        <hr class="my-4">
+        <p>AlertTrade is an innovative platform designed to automate trading operations on various 
+            exchanges using alerts from TradingView.
+        </p>
+        <p>
+            The platform accepts API requests, processes text data, and based on 
+            the contents of the alerts, sends the necessary requests to place trading orders on the selected exchange.
+        </p>
+        <p>
+            This significantly simplifies and speeds up the trading process, making it more efficient and automated
+        </p>
+        <a class="btn btn-primary btn-lg" href="{% url 'core:about'%}" role="button">Learn more</a>
+    </div>
+{% endblock %}
