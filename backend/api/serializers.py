@@ -1,21 +1,12 @@
 from base64 import b64decode
 
-from core.models import (
-    FavoriteRecipe,
-    Ingredient,
-    Recipe,
-    RecipeIngredient,
-    ShoppingCart,
-    ShortenedRecipeURL,
-    Subscription,
-    Tag,
-)
+from core.models import (FavoriteRecipe, Ingredient, Recipe, RecipeIngredient,
+                         ShoppingCart, ShortenedRecipeURL, Subscription, Tag)
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from djoser.serializers import UserCreateSerializer as BaseUserCreateSerializer
 from rest_framework import serializers
 from rest_framework.generics import ValidationError
-
 
 User = get_user_model()
 

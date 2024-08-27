@@ -1,23 +1,14 @@
+from django.contrib.auth import get_user_model
+from django.urls import include, path
 from rest_framework.generics import RetrieveAPIView
 from rest_framework.routers import DefaultRouter
-from django.contrib.auth import get_user_model
-from django.urls import path, include
-from .views import ReadOnly
-from .views import (
-    UserAvatarUpdateView,
-    SubscriptionsListView,
-    RecipeViewSet,
-    # RecipeListView,
-    # RecipeDetailView,
-    SubscribeCreateDestroyView,
-    RecipeLinkView,
-    TagViewSet,
-    IngredientViewSet,
-    FavoriteView,
-    ShoppingCartView,
-    DownloadShoppingListView
-)
+
 from .serializers import UserSerializer
+from .views import (  # RecipeListView,; RecipeDetailView,
+    DownloadShoppingListView, FavoriteView, IngredientViewSet, ReadOnly,
+    RecipeLinkView, RecipeViewSet, ShoppingCartView,
+    SubscribeCreateDestroyView, SubscriptionsListView, TagViewSet,
+    UserAvatarUpdateView)
 
 app_name = 'api'
 User = get_user_model()
