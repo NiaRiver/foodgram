@@ -150,9 +150,10 @@ jobs:
           envkey_ALLOWED_HOSTS: ${{ secrets.ALLOWED_HOSTS }}
           envkey_DEBUG: ${{ secrets.DEBUG }}
           envkey_DB_ENGINE: ${{ secrets.DB_ENGINE }}
-          directory: environment/
+          directory: /environment/
           file_name: .env
           fail_on_empty: false
+          sort_keys: false
       - name: Copy .env via SSH
         uses: appleboy/scp-action@master
         with:
@@ -160,7 +161,7 @@ jobs:
           username: ${{ secrets.USER }}
           key: ${{ secrets.SSH_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
-          source: "environment/.env"
+          source: "/environment/.env"
           target: "Dep/foodgram/infra"
       - name: Copy ingedients.json via SSH
         uses: appleboy/scp-action@master
