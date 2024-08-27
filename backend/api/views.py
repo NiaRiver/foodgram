@@ -303,7 +303,7 @@ class DownloadShoppingListView(APIView):
             .annotate(total_amount=Sum('amount'))
             .order_by('ingredient__name')
         )
-        page_size = 20
+        page_size = 25
         paginated_ingredients = paginate_list(ingredients, page_size)
 
         pdf_merger = PdfMerger()
@@ -326,10 +326,8 @@ class DownloadShoppingListView(APIView):
         pdf_merger.write(pdf_output)
         pdf_merger.close()
         pdf_output.seek(0)
-        filename = f"shopping_list_{
-            timezone.now().strftime('%Y%m%d_%H%M%S')
-        }.pdf"
-
+        time = timezone.now().strftime('%Y%m%d_%H%M%S')
+        filename = f"shopping_list_{time}.pdf"
         response = HttpResponse(pdf_output, content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
         return response

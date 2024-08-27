@@ -284,9 +284,6 @@ class RecipeListOrRetrieveSerializer(serializers.ModelSerializer):
         return False
 
 
-################################################################
-
-
 class IngredientCreateSerializer(serializers.ModelSerializer):
     id = serializers.PrimaryKeyRelatedField(queryset=Ingredient.objects.all())
     amount = serializers.IntegerField()
