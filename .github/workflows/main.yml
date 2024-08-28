@@ -148,6 +148,7 @@ jobs:
           envkey_DB_PORT: ${{ secrets.DB_PORT }}
           envkey_SECRET_KEY: ${{ secrets.SECRET_KEY }}
           envkey_ALLOWED_HOSTS: ${{ secrets.ALLOWED_HOSTS }}
+          envkey_ALLOWED_HOSTS_CSRF: ${{ secrets.ALLOWED_HOSTS_CSRF }}
           envkey_DEBUG: ${{ secrets.DEBUG }}
           envkey_DB_ENGINE: ${{ secrets.DB_ENGINE }}
           file_name: .env
