@@ -161,8 +161,8 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
-          source: ".env"
-          target: "Dep/foodgram/infra/"
+          source: .env
+          target: Dep/foodgram/infra/
       - name: Copy ingedients.json via SSH
         uses: appleboy/scp-action@master
         with:
