@@ -154,15 +154,6 @@ jobs:
           file_name: .env
           fail_on_empty: false
           sort_keys: false
-      - name: Copy .env via ssh's scp
-        uses: appleboy/scp-action@master
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          passphrase: ${{ secrets.SSH_PASSPHRASE }}
-          source: .env
-          target: Dep/foodgram/infra/
       - name: Copy ingedients.json via SSH
         uses: appleboy/scp-action@master
         with:
