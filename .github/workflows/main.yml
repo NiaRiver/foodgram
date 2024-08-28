@@ -199,9 +199,9 @@ jobs:
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
           script: |
             cd Dep/foodgram/infra/
-            sudo docker compose -f docker-compose.production.yml pull
             sudo docker compose -f docker-compose.production.yml down
-            sudo docker compose -f docker-compose.production.yml up -d
+            sudo docker compose -f docker-compose.production.yml pull
+            sudo docker compose -f docker-compose.production.yml up -d --build
             sudo docker compose -f docker-compose.production.yml exec backend python /app/manage.py load_tags ../prepared_data/tags.json
             sudo docker compose -f docker-compose.production.yml exec backend python /app/manage.py load_ingredients ../prepared_data/ingredients.json
 
