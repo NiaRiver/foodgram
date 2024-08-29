@@ -53,12 +53,12 @@ class UserAvatarUpdateView(RetrieveUpdateDestroyAPIView):
         user = self.get_object()
         serializer = self.get_serializer(user, data=request.data, partial=True)
 
-        if serializer.is_valid():
+        if not serializer.is_valid():
             serializer.save()
-            return Response(
-                {"status": "Avatar updated"}, status=status.HTTP_200_OK
-            )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            raise ValidationError(serializer.errors)
+        return Response(
+            {"status": "Avatar updated"}, status=status.HTTP_200_OK
+        )
 
     def delete(self, request, *args, **kwargs):
         try:
@@ -76,7 +76,7 @@ class SubscriptionsListView(ListAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        subscriptions = Subscription.objects.filter(user=user)
+        subscriptions = user.subscriptions.all()
         return (
             subscriptions if subscriptions.exists()
             else Subscription.objects.none()
@@ -134,8 +134,7 @@ class SubscribeCreateDestroyView(
                 {'error': 'Author not found.'},
                 status=status.HTTP_404_NOT_FOUND
             )
-        subscription = Subscription.objects.filter(
-            user=user, subscribed_to=author).first()
+        subscription = user.subscriptions.filter(subscribed_to=author).first()
         if not subscription:
             return Response(
                 {'error': 'Subscription does not exist.'},
@@ -253,9 +252,7 @@ class ShoppingCartView(CreateModelMixin, DestroyModelMixin, GenericViewSet):
         recipe = get_object_or_404(Recipe, id=recipe_id)
         data = {"user": request.user.id, "recipe": recipe.id}
 
-        if ShoppingCart.objects.filter(
-            user=request.user, recipe=recipe
-        ).exists():
+        if request.user.shopping_cart_recipes.filter(recipe=recipe).exists():
             return Response(
                 {'error': 'Recipe already in shopping cart.'},
                 status=status.HTTP_400_BAD_REQUEST
@@ -274,8 +271,9 @@ class ShoppingCartView(CreateModelMixin, DestroyModelMixin, GenericViewSet):
         recipe_id = self.kwargs.get("id")
         recipe = get_object_or_404(Recipe, id=recipe_id)
 
-        shopping_cart_item = ShoppingCart.objects.filter(
-            recipe=recipe, user=request.user).first()
+        shopping_cart_item = request.user.shopping_cart_recipes.filter(
+            recipe=recipe
+        ).first()
         if request.user.is_anonymous:
             return Response(
                 {"detail": "You're unauthorized for this action."},

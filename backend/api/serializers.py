@@ -1,12 +1,13 @@
 from base64 import b64decode
 
-from core.models import (FavoriteRecipe, Ingredient, Recipe, RecipeIngredient,
-                         ShoppingCart, ShortenedRecipeURL, Subscription, Tag)
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from djoser.serializers import UserCreateSerializer as BaseUserCreateSerializer
 from rest_framework import serializers
 from rest_framework.generics import ValidationError
+
+from core.models import (FavoriteRecipe, Ingredient, Recipe, RecipeIngredient,
+                         ShoppingCart, ShortenedRecipeURL, Subscription, Tag)
 
 User = get_user_model()
 
@@ -40,9 +41,7 @@ class UserSerializer(serializers.ModelSerializer):
         user = self.context["request"].user
         if user.is_anonymous:
             return False
-        return Subscription.objects.filter(
-            user=user, subscribed_to=obj
-        ).exists()
+        return user.subscriptions.filter(subscribed_to=obj).exists()
 
 
 class SubList(serializers.ModelSerializer):
@@ -78,12 +77,13 @@ class SubList(serializers.ModelSerializer):
         user = self.context["request"].user
         if user.is_anonymous:
             return False
-        return Subscription.objects.filter(
-            user=user, subscribed_to=obj.subscribed_to
+        return user.subscriptions.filter(
+            subscribed_to=obj.subscribed_to
         ).exists()
 
     def get_recipes(self, obj):
-        recipes = Recipe.objects.filter(author=obj.subscribed_to)
+        # recipes = Recipe.objects.filter(author=obj.subscribed_to)
+        recipes = obj.subscribed_to.recipes.all()
         limit = self.context["request"].query_params.get("recipes_limit", None)
         if limit:
             recipes = recipes[: int(limit)]
@@ -98,7 +98,7 @@ class SubList(serializers.ModelSerializer):
         ]
 
     def get_recipes_count(self, obj):
-        return Recipe.objects.filter(author=obj.subscribed_to).count()
+        return obj.subscribed_to.recipes.all().count()
 
 
 class SubscriptionSerializer(serializers.ModelSerializer):
@@ -145,13 +145,13 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         user = self.context["request"].user
         if user.is_anonymous:
             return False
-        return Subscription.objects.filter(
-            user=user, subscribed_to=obj.subscribed_to
+        return user.subscriptions.filter(
+            subscribed_to=obj.subscribed_to
         ).exists()
 
     def get_recipes(self, obj):
         limit = self.context["request"].query_params.get("recipes_limit", None)
-        recipes = Recipe.objects.filter(author=obj.subscribed_to)
+        recipes = obj.subscribed_to.recipes.all()
         if limit:
             recipes = recipes[: int(limit)]
         return [
@@ -165,7 +165,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         ]
 
     def get_recipes_count(self, obj):
-        return Recipe.objects.filter(author=obj.subscribed_to).count()
+        return obj.subscribed_to.recipes.all().count()
 
     def to_representation(self, instance):
         repr = super().to_representation(instance)
@@ -180,12 +180,10 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         subscribed_to = User.objects.get(pk=validated_data["subscribed_to"])
-        user = User.objects.get(pk=validated_data["user"])
+        user = self.context['request'].user
 
         # Check for existing subscription
-        if Subscription.objects.filter(
-            user=user, subscribed_to=subscribed_to
-        ).exists():
+        if user.subscriptions.filter(subscribed_to=subscribed_to).exists():
             raise ValidationError("You are already subscribed to this user.")
 
         return Subscription.objects.create(
@@ -277,7 +275,7 @@ class RecipeListOrRetrieveSerializer(serializers.ModelSerializer):
 
 class IngredientCreateSerializer(serializers.ModelSerializer):
     id = serializers.PrimaryKeyRelatedField(queryset=Ingredient.objects.all())
-    amount = serializers.IntegerField()
+    amount = serializers.IntegerField(min_value=1, max_value=32_000)
 
     class Meta:
         model = RecipeIngredient
@@ -294,6 +292,7 @@ class RecipePostOrPatchSerializer(serializers.ModelSerializer):
     image = Base64ImageField(required=True)
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
+    cooking_time = serializers.IntegerField(min_value=1, max_value=32_000)
 
     class Meta:
         model = Recipe
@@ -311,29 +310,29 @@ class RecipePostOrPatchSerializer(serializers.ModelSerializer):
         ]
 
     def get_is_favorited(self, obj):
-        return FavoriteRecipe.objects.filter(
-            user=self.context["request"].user, recipe=obj
+        return self.context["request"].user.favorite_recipes.filter(
+            recipe=obj
         ).exists()
 
     def get_is_in_shopping_cart(self, obj):
-        return ShoppingCart.objects.filter(
-            user=self.context["request"].user, recipe=obj
+        return self.context["request"].user.shopping_cart_recipes.filter(
+            recipe=obj
         ).exists()
 
     def validate(self, data):
         # Check if ingredients field is empty
-        ingredient = set()
-        tags = set()
         if not data.get("tags"):
             raise ValidationError(
                 {"tags": "Recipe should have at least one tag. d:"}
             )
-        for item in data.get("tags"):
+
+        tags = set()
+        for item in data["tags"]:
+            if item in tags:
+                raise ValidationError(
+                    {"tags": "unique constraint failed."}
+                )
             tags.add(item)
-        if len(tags) != len(data.get("tags")):
-            raise ValidationError(
-                {"tags": "unique constraint failed."}
-            )
 
         if not data.get("ingredients"):
             raise ValidationError(
@@ -342,67 +341,46 @@ class RecipePostOrPatchSerializer(serializers.ModelSerializer):
                         "Recipe should have at least one ingredient. d:"
                 }
             )
-        for item in data.get("ingredients"):
-            ingredient.add(item["id"])
-            if item["amount"] < 1:
+
+        ingredient = set()
+        for item in data["ingredients"]:
+            if item["id"] in ingredient:
                 raise ValidationError(
-                    {
-                        "ingredients":
-                            "Amount value should be greater than 1 or equal.d:"
-                    }
+                    {"ingredients": "unique constraint failed."}
                 )
-        if len(ingredient) != len(data.get("ingredients")):
-            raise ValidationError({"ingredients": "unique constraint failed."})
-        if data.get("cooking_time") < 1:
-            raise ValidationError(
-                {"cooking_time": "Should value be greater than 1 or equal. d:"}
-            )
+            ingredient.add(item["id"])
         return data
+
+    def add_ingredients(self, recipe, ingredients):
+        recipe_ingredients = []
+
+        for ingredient in ingredients:
+            # Получение объекта ингредиента
+            ingredient_id = ingredient.pop("id")
+            recipe_ingredient = RecipeIngredient(
+                recipe=recipe,
+                ingredient=ingredient_id,
+                # amount=ingredient_data['amount']
+                **ingredient,  # Присвоение остальных полей
+            )
+            recipe_ingredients.append(recipe_ingredient)
+        RecipeIngredient.objects.bulk_create(recipe_ingredients)
 
     def create(self, validated_data):
         # Извлечение данных ингредиентов
         ingredients_data = validated_data.pop("ingredients")
-        """
-        # Реализация сложения повторяющихся ингредиентов.
-        # Чисто вириант реализации на будущее.
-        # ingredients = dict()
-        # data_set = dict()
-        # for item in ingredients_data:
-        #     if item["id"] in ingredients.keys():
-        #         ingredients[item["id"]] += item["amount"]
-        #     else:
-        #         ingredients[item["id"]] = item["amount"]
-        # for id, amount in ingredients.items():
-        #     data_set[id] = amount
-        """
         recipe = super().create(validated_data)
 
         # Создание связей с ингредиентами
-        for ingredient_data in ingredients_data:
-            # Получение объекта ингредиента
-            ingredient = ingredient_data.pop("id")
-            RecipeIngredient.objects.create(
-                recipe=recipe,
-                ingredient=ingredient,
-                # amount=ingredient_data['amount']
-                **ingredient_data,  # Присвоение остальных полей
-            )
+        self.add_ingredients(recipe, ingredients_data)
         recipe.refresh_from_db()
         return recipe
 
     def update(self, instance, validated_data):
         if validated_data.get("ingredients"):
             ingredients_data = validated_data.pop("ingredients")
-
-            for ingredient_data in ingredients_data:
-                ingredient_id = ingredient_data.pop("id")
-                recipe_ingredient, _ = (
-                    RecipeIngredient.objects.update_or_create(
-                        recipe=instance,
-                        ingredient_id=ingredient_id,
-                        defaults=ingredient_data,
-                    )
-                )
+            instance.ingredients.all().delete()
+            self.add_ingredients(instance, ingredients_data)
         super().update(instance, validated_data)
 
         return instance

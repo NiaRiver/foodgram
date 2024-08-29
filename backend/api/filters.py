@@ -1,28 +1,25 @@
 import django_filters
-from core.models import Ingredient, Recipe
 from django.contrib.auth import get_user_model
+
+from core.models import Ingredient, Recipe
 
 User = get_user_model()
 
 
 class RecipeFilterSet(django_filters.FilterSet):
-    tags = django_filters.CharFilter(method='filter_tags')
-    author = django_filters.ModelChoiceFilter(
-        queryset=User.objects.all()
-    )
-    is_favorited = django_filters.CharFilter(
-        method='filter_is_favorited'
-    )
+    tags = django_filters.CharFilter(method="filter_tags")
+    author = django_filters.ModelChoiceFilter(queryset=User.objects.all())
+    is_favorited = django_filters.CharFilter(method="filter_is_favorited")
     is_in_shopping_cart = django_filters.CharFilter(
-        method='filter_is_in_shopping_cart'
+        method="filter_is_in_shopping_cart"
     )
 
     class Meta:
         model = Recipe
-        fields = ['tags', 'author', 'is_favorited', 'is_in_shopping_cart']
+        fields = ["tags", "author", "is_favorited", "is_in_shopping_cart"]
 
     def filter_tags(self, queryset, name, value):
-        tag_slugs = self.request.GET.getlist('tags')
+        tag_slugs = self.request.GET.getlist("tags")
         return queryset.filter(tags__slug__in=tag_slugs).distinct()
 
     def filter_is_favorited(self, queryset, name, value):
@@ -46,9 +43,9 @@ class RecipeFilterSet(django_filters.FilterSet):
 
 class IngredientFilter(django_filters.rest_framework.FilterSet):
     name = django_filters.rest_framework.CharFilter(
-        field_name='name', lookup_expr='startswith'
+        field_name="name", lookup_expr="startswith"
     )
 
     class Meta:
         model = Ingredient
-        fields = ['name']
+        fields = ["name"]
