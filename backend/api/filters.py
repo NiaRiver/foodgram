@@ -1,6 +1,5 @@
 import django_filters
 from django.contrib.auth import get_user_model
-
 from core.models import Ingredient, Recipe
 
 User = get_user_model()
