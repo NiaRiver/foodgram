@@ -1,7 +1,6 @@
 from io import BytesIO
+from urllib.parse import urljoin
 
-from core.models import (FavoriteRecipe, Ingredient, Recipe, RecipeIngredient,
-                         ShoppingCart, ShortenedRecipeURL, Subscription, Tag)
 from django import urls
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
@@ -21,16 +20,18 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import (GenericViewSet, ModelViewSet,
                                      ReadOnlyModelViewSet)
 
+from core.models import (FavoriteRecipe, Ingredient, Recipe, RecipeIngredient,
+                         ShoppingCart, ShortenedRecipeURL, Subscription, Tag)
 from .filters import IngredientFilter, RecipeFilterSet
 from .pagination import LimitPagination, SubLimitPagination, paginate_list
 from .permissions import IsAuthorOrReadOnly, ReadOnly
+from .services import pdf_over_template
 from .serializers import (AvatarSerializer, FavoriteSerializer,
                           GetOrRetrieveIngredientSerializer,
                           RecipeLinkSerializer, RecipeListOrRetrieveSerializer,
                           RecipePostOrPatchSerializer, ShoppingCartSerializer,
                           SubList, SubscriptionSerializer, TagSerializer,
                           UserSerializer)
-from .services import pdf_over_template
 
 User = get_user_model()
 
@@ -182,11 +183,11 @@ class RecipeLinkView(APIView):
 
 def redirect_to_original(request, short_code):
     url = get_object_or_404(ShortenedRecipeURL, short_code=short_code)
-    return redirect(
-        urls.reverse(
-            "api:recipe-detail", kwargs={"pk": url.recipe.id}
-        )
-    )
+    domain = request.get_host()
+
+    target_url = urljoin(f"http://{domain}/", f"recipes/{url.recipe.id}")
+
+    return redirect(target_url)
 
 
 class IngredientViewSet(ReadOnlyModelViewSet):
