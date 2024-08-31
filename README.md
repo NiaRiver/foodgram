@@ -12,6 +12,9 @@
 ![Static Badge](https://img.shields.io/badge/JavaScript-gray?style=plastic&logo=JavaScript&labelColor=yellow) - JavaScript  
 ![Static Badge](https://img.shields.io/badge/NginX-gray?style=plastic&logo=nginx&labelColor=green) - NginX  
 
+### Ссылка на сайт
+<https://nia-foodgram.hopto.org/>
+
 ### Оглавления и навигация
 
 - [Foodgram](#foodgram)
