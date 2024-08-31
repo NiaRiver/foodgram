@@ -1,9 +1,12 @@
+import os
 import random
 import string
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.db.models.signals import post_delete, pre_save
+from django.dispatch import receiver
 from django.utils import timezone
 
 from .validators import validate_username
@@ -105,7 +108,7 @@ class Recipe(models.Model):
     )
     name = models.CharField(max_length=100, verbose_name="Название")
     image = models.ImageField(
-        upload_to="recipes/images/", verbose_name="Изображение"
+        upload_to="recipes/images/", verbose_name="Изображение",
     )
     text = models.TextField(verbose_name="Описание")
     cooking_time = models.PositiveSmallIntegerField(
@@ -237,3 +240,49 @@ class ShoppingCart(models.Model):
 
     def __str__(self):
         return f"{self.user.username} -> " f"{self.recipe.name}"
+
+
+@receiver(models.signals.post_delete, sender=Recipe)
+def auto_delete_file_on_delete(sender, instance, **kwargs):
+    if instance.image:
+        if os.path.isfile(instance.image.path):
+            os.remove(instance.image.path)
+
+
+@receiver(pre_save, sender=Recipe)
+def auto_delete_file_on_change(sender, instance, **kwargs):
+    if not instance.pk:
+        return False
+
+    try:
+        old_file = Recipe.objects.get(pk=instance.pk).image
+    except Recipe.DoesNotExist:
+        return False
+
+    new_file = instance.image
+    if old_file and old_file != new_file:
+        if os.path.isfile(old_file.path):
+            os.remove(old_file.path)
+
+
+@receiver(post_delete, sender=Recipe)
+def auto_user_delete_image_on_delete(sender, instance, **kwargs):
+    if instance.image:
+        if os.path.isfile(instance.image.path):
+            os.remove(instance.image.path)
+
+
+@receiver(pre_save, sender=User)
+def auto_delete_avatar_on_change(sender, instance, **kwargs):
+    if not instance.pk:
+        return False
+
+    try:
+        old_file = User.objects.get(pk=instance.pk).avatar
+    except User.DoesNotExist:
+        return False
+
+    new_file = instance.avatar
+    if old_file and old_file != new_file:
+        if os.path.isfile(old_file.path):
+            os.remove(old_file.path)
