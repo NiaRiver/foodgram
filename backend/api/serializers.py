@@ -368,33 +368,9 @@ class RecipePostOrPatchSerializer(serializers.ModelSerializer):
         return instance
 
     def to_representation(self, instance):
-        # Customize the output to match the desired schema
-        representation = super().to_representation(instance)
-
-        # Modify tags to include `id`, `name`, and `slug`
-        representation["tags"] = [
-            {"id": tag.id, "name": tag.name, "slug": tag.slug}
-            for tag in instance.tags.all()
-        ]
-
-        ingredients = []
-        for recipe_ingredient in instance.ingredients.all():
-            ingredient = recipe_ingredient.ingredient
-            ingredients.append(
-                {
-                    "id": ingredient.id,
-                    "name": ingredient.name,
-                    "measurement_unit": ingredient.measurement_unit,
-                    "amount": recipe_ingredient.amount,
-                }
-            )
-        representation["ingredients"] = ingredients
-
-        representation["author"] = UserSerializer(
-            instance.author, context=self.context
+        return RecipeListOrRetrieveSerializer(
+            instance, context=self.context
         ).data
-
-        return representation
 
 
 class RecipeLinkSerializer(serializers.ModelSerializer):
