@@ -67,7 +67,7 @@ class SubList(serializers.ModelSerializer):
             "avatar",
         ]
 
-    def get_avatar(self, obj):  # New method to handle avatar safely
+    def get_avatar(self, obj):
         if obj.subscribed_to.avatar:
             return obj.subscribed_to.avatar.url
         return None
@@ -81,7 +81,6 @@ class SubList(serializers.ModelSerializer):
         ).exists()
 
     def get_recipes(self, obj):
-        # recipes = Recipe.objects.filter(author=obj.subscribed_to)
         recipes = obj.subscribed_to.recipes.all()
         limit = self.context["request"].query_params.get("recipes_limit", None)
         if limit:
@@ -112,6 +111,9 @@ class SubscriptionSerializer(serializers.ModelSerializer):
     subscribed_to = serializers.PrimaryKeyRelatedField(
         queryset=User.objects.all(), write_only=True
     )
+    user = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(), write_only=True
+    )
 
     class Meta:
         model = Subscription
@@ -126,6 +128,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
             "recipes_count",
             "subscribed_to",
             "avatar",
+            "user"
         ]
 
     def validate(self, data):
@@ -135,7 +138,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
             )
         return super().validate(data)
 
-    def get_avatar(self, obj):  # New method to handle avatar safely
+    def get_avatar(self, obj):
         if obj.subscribed_to.avatar:
             return obj.subscribed_to.avatar.url
         return None
@@ -170,24 +173,6 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         repr = super().to_representation(instance)
         repr["id"] = instance.subscribed_to.id
         return repr
-
-    def to_internal_value(self, data):
-        repr = super().to_internal_value(data)
-        repr["subscribed_to"] = data["subscribed_to"]
-        repr["user"] = data["user"]
-        return repr
-
-    def create(self, validated_data):
-        subscribed_to = User.objects.get(pk=validated_data["subscribed_to"])
-        user = self.context['request'].user
-
-        # Check for existing subscription
-        if user.subscriptions.filter(subscribed_to=subscribed_to).exists():
-            raise ValidationError("You are already subscribed to this user.")
-
-        return Subscription.objects.create(
-            user=user, subscribed_to=subscribed_to
-        )
 
 
 class SubscribeSerializer(serializers.ModelSerializer):
@@ -319,7 +304,6 @@ class RecipePostOrPatchSerializer(serializers.ModelSerializer):
         ).exists()
 
     def validate(self, data):
-        # Check if ingredients field is empty
         if not data.get("tags"):
             raise ValidationError(
                 {"tags": "Recipe should have at least one tag. d:"}
@@ -359,8 +343,7 @@ class RecipePostOrPatchSerializer(serializers.ModelSerializer):
             recipe_ingredient = RecipeIngredient(
                 recipe=recipe,
                 ingredient=ingredient_id,
-                # amount=ingredient_data['amount']
-                **ingredient,  # Присвоение остальных полей
+                **ingredient
             )
             recipe_ingredients.append(recipe_ingredient)
         RecipeIngredient.objects.bulk_create(recipe_ingredients)
@@ -407,22 +390,9 @@ class RecipePostOrPatchSerializer(serializers.ModelSerializer):
             )
         representation["ingredients"] = ingredients
 
-        # Modify author to include additional fields
-        representation["author"] = {
-            "id": instance.author.id,
-            "username": instance.author.username,
-            "first_name": instance.author.first_name,
-            "last_name": instance.author.last_name,
-            "email": instance.author.email,
-            # Example value; change based on your logic
-            "is_subscribed": Subscription.objects.filter(
-                user=self.context["request"].user,
-                subscribed_to=instance.author
-            ).exists(),
-            # Example value; change based on your logic
-            "avatar": instance.author.avatar.url if instance.author.avatar
-            else None,
-        }
+        representation["author"] = UserSerializer(
+            instance.author, context=self.context
+        ).data
 
         return representation
 

@@ -1,7 +1,6 @@
 from io import BytesIO
 from urllib.parse import urljoin
 
-from django import urls
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db.models import Sum
@@ -20,8 +19,16 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import (GenericViewSet, ModelViewSet,
                                      ReadOnlyModelViewSet)
 
-from core.models import (FavoriteRecipe, Ingredient, Recipe, RecipeIngredient,
-                         ShoppingCart, ShortenedRecipeURL, Subscription, Tag)
+from core.models import (
+    FavoriteRecipe,
+    Ingredient,
+    Recipe,
+    RecipeIngredient,
+    ShoppingCart,
+    ShortenedRecipeURL,
+    Subscription,
+    Tag
+)
 from .filters import IngredientFilter, RecipeFilterSet
 from .pagination import LimitPagination, SubLimitPagination, paginate_list
 from .permissions import IsAuthorOrReadOnly, ReadOnly
@@ -64,7 +71,7 @@ class UserAvatarUpdateView(RetrieveUpdateDestroyAPIView):
     def delete(self, request, *args, **kwargs):
         try:
             user = get_object_or_404(User, pk=self.request.user.id)
-            user.avatar = None
+            user.avatar.delete(save=False)
             user.save()
             return Response(status=status.HTTP_204_NO_CONTENT)
         except Exception as e:
