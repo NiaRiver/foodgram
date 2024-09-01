@@ -276,4 +276,4 @@ sudo docker-compose -f infra/docker-compose.yml up -d
 
 - **Contact the creator**
   - Email: <nianate@yandex.ru>
-  - GitHub: <github.com/NiaRiver/>
+  - GitHub: github.com/NiaRiver/
