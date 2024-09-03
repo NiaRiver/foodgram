@@ -52,6 +52,7 @@ class SubList(serializers.ModelSerializer):
     last_name = serializers.ReadOnlyField(source="subscribed_to.last_name")
     avatar = serializers.SerializerMethodField()
     email = serializers.ReadOnlyField(source="subscribed_to.email")
+    id = serializers.ReadOnlyField(source="subscribed_to.id")
 
     class Meta:
         model = Subscription
