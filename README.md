@@ -77,7 +77,8 @@ sudo docker-compose -f infra/docker-compose.yml up -d
 ### Загрузка подготовленных данных
 
 ```bash
-sudo docker-compose -f infra/docker-compose.yml up -d
+sudo docker-compose -f infra/docker-compose.yml exec backend python /app/manage.py load_ingredients.py ../prepared_data/ingredients.json
+sudo docker-compose -f infra/docker-compose.yml exec backend python /app/manage.py load_tagss.py ../prepared_data/tags.json
 ```
 
 ## Описание проекта
