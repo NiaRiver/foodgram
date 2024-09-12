@@ -78,7 +78,7 @@ sudo docker-compose -f infra/docker-compose.yml up -d
 
 ```bash
 sudo docker-compose -f infra/docker-compose.yml exec backend python /app/manage.py load_ingredients.py ../prepared_data/ingredients.json
-sudo docker-compose -f infra/docker-compose.yml exec backend python /app/manage.py load_tagss.py ../prepared_data/tags.json
+sudo docker-compose -f infra/docker-compose.yml exec backend python /app/manage.py load_tags.py ../prepared_data/tags.json
 ```
 
 ## Описание проекта
