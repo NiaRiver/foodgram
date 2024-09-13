@@ -1,16 +1,20 @@
 # Foodgram
 
 ## Где каждый рецепт — как искусство
+### Стасус CI/CD
+[![Main Foodgram Workflow](https://github.com/NiaRiver/foodgram/actions/workflows/main.yml/badge.svg?branch=main)](https://github.com/NiaRiver/foodgram/actions/workflows/main.yml) - CI/CD для main branch
 
 ### Используемые технологии
-
-![Static Badge](https://img.shields.io/badge/Django-grey?style=plastic&logo=django&logoColor=white&labelColor=green) - Django  
-![Static Badge](https://img.shields.io/badge/Django%20Rest%20Framework-grey?style=plastic&logo=API&logoColor=white&label=DRF&labelColor=red) - Django Rest Framework  
-![Static Badge](https://img.shields.io/badge/PostgreSQL-grey?style=plastic&logo=Postgresql&logoColor=white&labelColor=blue) - PostgreSQL  
+#### Backend
 ![Static Badge](https://img.shields.io/badge/docker-grey?style=plastic&logo=docker&logoColor=white&labelColor=blue) - Docker  
+![Static Badge](https://img.shields.io/badge/PostgreSQL-grey?style=plastic&logo=Postgresql&logoColor=white&labelColor=blue) - PostgreSQL  
+![Static Badge](https://img.shields.io/badge/Django%20Rest%20Framework-grey?style=plastic&logo=API&logoColor=white&label=DRF&labelColor=red) - Django Rest Framework  
+#### Frontend
 ![Static Badge](https://img.shields.io/badge/React-gray?style=plastic&logo=react&labelColor=blue) - ReactJS  
 ![Static Badge](https://img.shields.io/badge/JavaScript-gray?style=plastic&logo=JavaScript&labelColor=yellow) - JavaScript  
+#### Infrastructure
 ![Static Badge](https://img.shields.io/badge/NginX-gray?style=plastic&logo=nginx&labelColor=green) - NginX  
+![Static Badge](https://img.shields.io/badge/Django-grey?style=plastic&logo=django&logoColor=white&labelColor=green) - Django  
 
 ### Ссылка на сайт
 <https://nia-foodgram.hopto.org/>
@@ -18,9 +22,6 @@
 ### Оглавления и навигация
 
 - [Foodgram](#foodgram)
-  - [Где каждый рецепт — как искусство](#где-каждый-рецепт--как-искусство)
-    - [Используемые технологии](#используемые-технологии)
-    - [Оглавления и навигация](#оглавления-и-навигация)
   - [Как запустить проект с помощью Docker Compose](#как-запустить-проект-с-помощью-docker-compose)
   - [Выполнить команды](#выполнить-команды)
     - [Запуск оркестра](#запуск-оркестра)
@@ -100,9 +101,7 @@ sudo docker-compose -f infra/docker-compose.yml exec backend python /app/manage.
 
 Погружайтесь в мир гастрономического удовольствия с Фудграм и создавайте свои кулинарные шедевры вместе с нами!
 
-## Как должно работать веб-приложение
-
-Проект состоит из следующих страниц:
+## Проект состоит из следующих страниц
 
 - Главная
 - Страница входа
